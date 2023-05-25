@@ -1,4 +1,4 @@
-package fourinrow.android.client;
+package fourinrow.android.client.network;
 
 import java.io.PrintWriter;
 import java.util.concurrent.Executors;

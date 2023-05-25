@@ -1,4 +1,4 @@
-package fourinrow.android.client;
+package fourinrow.android.client.activities;
 
 import android.content.Intent;
 import android.os.Bundle;
@@ -11,7 +11,11 @@ import java.io.PrintWriter;
 import java.net.InetSocketAddress;
 import java.util.concurrent.Executors;
 
-public class MainActivity extends AppCompatActivity {
+import fourinrow.android.client.R;
+import fourinrow.android.client.Report;
+import fourinrow.android.client.network.ServerConnector;
+
+public class ConnectActivity extends EventHandlerActivity {
 
     EditText uiIpAddress;
     EditText uiPort;
@@ -23,32 +27,27 @@ public class MainActivity extends AppCompatActivity {
     private PrintWriter output;
 //    Spinner spnUsers;
 
-    void eventHandling(String eventName, String status, Report report) {
-        runOnUiThread(() -> {
-            if (report != null) {
-                report.report(findViewById(android.R.id.content));
+    @Override
+    protected void uiThreadHandleImpl(String eventName, String status) {
+        if (eventName.contentEquals("ServerConnector.open")) {
+            if (status.contentEquals("start")) {
+                uiBtnConnect.setEnabled(false);
+            } else if (status.contentEquals("failure")) {
+                uiBtnConnect.setEnabled(true);
+            } else if (status.contentEquals("success")) {
+                uiBtnConnect.setEnabled(false);
             }
-
-            if (eventName.contentEquals("ServerConnector.open")) {
-                if (status.contentEquals("start")) {
-                    uiBtnConnect.setEnabled(false);
-                } else if (status.contentEquals("failure")) {
-                    uiBtnConnect.setEnabled(true);
-                } else if (status.contentEquals("success")) {
-                    uiBtnConnect.setEnabled(false);
-                }
-            } else if (eventName.contentEquals("ServerConnector.run")) {
-                if (status.contentEquals("failure")) {
-                    uiBtnConnect.setEnabled(true);
-                }
+        } else if (eventName.contentEquals("ServerConnector.run")) {
+            if (status.contentEquals("failure")) {
+                uiBtnConnect.setEnabled(true);
             }
-        });
+        }
     }
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_main);
+        setContentView(R.layout.activity_connect);
 
         uiIpAddress = findViewById(R.id.uiIpAddressInput);
         uiPort = findViewById(R.id.uiPortInput);
@@ -79,18 +78,13 @@ public class MainActivity extends AppCompatActivity {
                 return;
             }
 
+            ServerConnector
+                    .resetServer(new InetSocketAddress(ip, port))
+                    .bindActivity(this);
+
             Executors
                     .newSingleThreadExecutor()
-                    .execute(
-                            new ServerConnector(
-                                    this,
-                                    new InetSocketAddress(ip, port),
-                                    (e, m, r) -> {
-                                        eventHandling(e, m, r);
-                                        return null;
-                                    }
-                            )
-                    );
+                    .execute(ServerConnector.getServer());
         });
 
 //        uiBtnRegister.setOnClickListener(view -> {

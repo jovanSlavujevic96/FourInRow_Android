@@ -13,7 +13,7 @@ public class Report {
         this.message = message;
     }
 
-    void report(View view) {
+    public void report(View view) {
         // exception report
         if (exception != null) {
             exception.printStackTrace();

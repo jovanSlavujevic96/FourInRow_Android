@@ -1,4 +1,4 @@
-package fourinrow.android.client;
+package fourinrow.android.client.network;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -7,28 +7,39 @@ import java.io.PrintWriter;
 import java.net.Socket;
 import java.net.SocketAddress;
 
-import kotlin.jvm.functions.Function3;
+import fourinrow.android.client.Report;
+import fourinrow.android.client.activities.EventHandlerActivity;
 
 public class ServerConnector implements Runnable {
     final private SocketAddress serverAddress;
-    final private Function3<String, String, Report, Void> eventHandler;
-
     private Socket socket;
     private BufferedReader br;
     private PrintWriter pw;
+    private EventHandlerActivity activity = null;
 
-    public ServerConnector(MainActivity parentActivity,
-                           SocketAddress address,
-                           Function3<String, String, Report, Void> eventH) {
+    static private ServerConnector server = null;
 
+    static public ServerConnector resetServer(SocketAddress address) {
+        server = new ServerConnector(address);
+        return server;
+    }
+
+    static public ServerConnector getServer() {
+        return server;
+    }
+
+    private ServerConnector(SocketAddress address) {
         serverAddress = address;
-        this.eventHandler = eventH;
+    }
+
+    public void bindActivity(EventHandlerActivity activity) {
+        this.activity = activity;
     }
 
     void open() throws RuntimeException {
 
         // inform MainActivity about start of open process
-        eventHandler.invoke("ServerConnector.open", "start", null);
+        activity.handleEvent("ServerConnector.open", "start", null);
 
         socket = new Socket();
         try {
@@ -36,7 +47,7 @@ public class ServerConnector implements Runnable {
             socket.connect(serverAddress, 2000);
         } catch (IOException connectE) {
             // inform main activity about negative outcome of process
-            eventHandler.invoke(
+            activity.handleEvent(
                     "ServerConnector.open",
                     "failure",
                     new Report(
@@ -60,7 +71,7 @@ public class ServerConnector implements Runnable {
             close();
 
             // inform main activity about negative outcome of process
-            eventHandler.invoke(
+            activity.handleEvent(
                     "ServerConnector.open",
                     "failure",
                     new Report(
@@ -74,7 +85,7 @@ public class ServerConnector implements Runnable {
         }
 
         // inform main activity about positive outcome of process
-        eventHandler.invoke(
+        activity.handleEvent(
                 "ServerConnector.open",
                 "success",
                 new Report(
@@ -138,7 +149,7 @@ public class ServerConnector implements Runnable {
                 rcvMsg = br.readLine();
             } catch (IOException recvE) {
                 // inform main activity about negative outcome of process
-                eventHandler.invoke(
+                activity.handleEvent(
                         "ServerConnector.run",
                         "failure",
                         new Report(
@@ -153,7 +164,7 @@ public class ServerConnector implements Runnable {
 
             if (rcvMsg == null) {
                 // inform main activity about negative outcome of process
-                eventHandler.invoke(
+                activity.handleEvent(
                         "ServerConnector.run",
                         "failure",
                         new Report(

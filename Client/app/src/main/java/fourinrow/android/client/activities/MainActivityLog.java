@@ -1,4 +1,4 @@
-package fourinrow.android.client;
+package fourinrow.android.client.activities;
 
 import androidx.appcompat.app.AppCompatActivity;
 
@@ -7,6 +7,8 @@ import android.view.View;
 import android.widget.Button;
 import android.widget.TextView;
 import android.widget.Toast;
+
+import fourinrow.android.client.R;
 
 public class MainActivityLog extends AppCompatActivity implements View.OnClickListener {
 
