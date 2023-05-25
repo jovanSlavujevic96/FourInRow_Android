@@ -1,0 +1,85 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    tools:context=".MainActivity"
+>
+
+    <RelativeLayout
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_centerVertical="true"
+        android:layout_centerHorizontal="true"
+        android:id="@+id/connectGroup"
+    >
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:id="@+id/linIp"
+        >
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:textSize="18sp"
+                android:text="@string/ip_adresa"
+                android:textColor="@color/black"
+            />
+
+            <EditText
+                android:id="@+id/uiIpAddressInput"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:autofillHints="IP address"
+                android:ems="8"
+                android:inputType="text"
+                android:minHeight="48dp"
+                android:text="@string/ip_adresa_value"
+                android:textSize="18sp"
+                tools:ignore="LabelFor"
+            />
+        </LinearLayout>
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:id="@+id/linPort"
+            android:layout_below="@id/linIp"
+        >
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/port"
+                android:textColor="@color/black"
+                android:textSize="18sp"
+                android:layout_marginStart="42dp"
+                android:layout_marginLeft="42dp"
+            />
+
+            <EditText
+                android:id="@+id/uiPortInput"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:autofillHints="port"
+                android:ems="8"
+                android:inputType="text"
+                android:minHeight="48dp"
+                android:text="@string/port_value"
+                android:textSize="18sp"
+                tools:ignore="LabelFor"
+            />
+        </LinearLayout>
+        <Button
+            android:id="@+id/uiConnectBtn"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:baselineAligned="true"
+            android:text="@string/povezi_se"
+            android:layout_below="@id/linPort"
+            android:layout_marginTop="15dp"
+            android:layout_marginLeft="135dp"
+            android:layout_marginStart="135dp"
+        />
+    </RelativeLayout>
+
+</RelativeLayout>
