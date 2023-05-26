@@ -1,4 +1,4 @@
-package fourinrow.android.client;
+package fourinrow.android.client.states;
 
 import android.view.View;
 

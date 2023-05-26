@@ -7,8 +7,11 @@ import java.io.PrintWriter;
 import java.net.Socket;
 import java.net.SocketAddress;
 
-import fourinrow.android.client.Report;
+import fourinrow.android.client.states.Event;
+import fourinrow.android.client.states.Phase;
+import fourinrow.android.client.states.Report;
 import fourinrow.android.client.activities.EventHandlerActivity;
+import fourinrow.android.client.states.State;
 
 public class ServerConnector implements Runnable {
     final private SocketAddress serverAddress;
@@ -36,10 +39,12 @@ public class ServerConnector implements Runnable {
         this.activity = activity;
     }
 
+    PrintWriter getPw() { return pw; }
+
     void open() throws RuntimeException {
 
         // inform MainActivity about start of open process
-        activity.handleEvent("ServerConnector.open", "start", null);
+        activity.handleEvent(new Event(Phase.CONNECT, State.START), null);
 
         socket = new Socket();
         try {
@@ -48,8 +53,7 @@ public class ServerConnector implements Runnable {
         } catch (IOException connectE) {
             // inform main activity about negative outcome of process
             activity.handleEvent(
-                    "ServerConnector.open",
-                    "failure",
+                    new Event (Phase.CONNECT, State.FAILURE),
                     new Report(
                             connectE,
                             "Greska: Neuspesna konekcija sa serverom. Pokusajte ponovo konekciju"
@@ -72,8 +76,7 @@ public class ServerConnector implements Runnable {
 
             // inform main activity about negative outcome of process
             activity.handleEvent(
-                    "ServerConnector.open",
-                    "failure",
+                    new Event (Phase.CONNECT, State.FAILURE),
                     new Report(
                             extractE,
                             "Greska: Neuspesno mrezno podesavanje. Pokusajte ponovo konekciju"
@@ -86,8 +89,7 @@ public class ServerConnector implements Runnable {
 
         // inform main activity about positive outcome of process
         activity.handleEvent(
-                "ServerConnector.open",
-                "success",
+                new Event (Phase.CONNECT, State.SUCCESS),
                 new Report(
                         null,
                         "Uspesno povezivanje sa serverom"
@@ -150,8 +152,7 @@ public class ServerConnector implements Runnable {
             } catch (IOException recvE) {
                 // inform main activity about negative outcome of process
                 activity.handleEvent(
-                        "ServerConnector.run",
-                        "failure",
+                        new Event (Phase.DISCONNECT, State.FAILURE),
                         new Report(
                                 recvE,
                                 "Greska: Veza sa serverom je pukla"
@@ -165,8 +166,7 @@ public class ServerConnector implements Runnable {
             if (rcvMsg == null) {
                 // inform main activity about negative outcome of process
                 activity.handleEvent(
-                        "ServerConnector.run",
-                        "failure",
+                        new Event (Phase.DISCONNECT, State.FAILURE),
                         new Report(
                                 null,
                                 "Greska: Primljena poruka je prazna"

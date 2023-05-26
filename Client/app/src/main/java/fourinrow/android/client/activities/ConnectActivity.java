@@ -5,42 +5,54 @@ import android.os.Bundle;
 import android.widget.Button;
 import android.widget.EditText;
 
-import androidx.appcompat.app.AppCompatActivity;
-
-import java.io.PrintWriter;
 import java.net.InetSocketAddress;
 import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 
 import fourinrow.android.client.R;
-import fourinrow.android.client.Report;
+import fourinrow.android.client.states.Event;
+import fourinrow.android.client.states.Phase;
+import fourinrow.android.client.states.Report;
 import fourinrow.android.client.network.ServerConnector;
+import fourinrow.android.client.states.State;
 
 public class ConnectActivity extends EventHandlerActivity {
 
     EditText uiIpAddress;
     EditText uiPort;
-    //    EditText uiName;
     Button uiBtnConnect;
-//    Button uiBtnRegister;
-//    Button uiBtnPlay;
-
-    private PrintWriter output;
-//    Spinner spnUsers;
 
     @Override
-    protected void uiThreadHandleImpl(String eventName, String status) {
-        if (eventName.contentEquals("ServerConnector.open")) {
-            if (status.contentEquals("start")) {
-                uiBtnConnect.setEnabled(false);
-            } else if (status.contentEquals("failure")) {
-                uiBtnConnect.setEnabled(true);
-            } else if (status.contentEquals("success")) {
-                uiBtnConnect.setEnabled(false);
+    protected void uiThreadHandleImpl(Event event) {
+        if (event.getPhase() == Phase.CONNECT) {
+            switch(event.getState()) {
+                case START:
+                    // disable connect button
+                    uiBtnConnect.setEnabled(false);
+
+                    // start visualization of pending animation
+                    break;
+                case FAILURE:
+                    // enable connect button once again
+                    uiBtnConnect.setEnabled(true);
+
+                    // end visualization of pending animation
+                    break;
+                case SUCCESS:
+                    // disable connect button
+                    uiBtnConnect.setEnabled(false);
+
+                    // open another activity window
+                    activityTransition(RegisterActivity.class);
+                    break;
+                default:
+                    break;
             }
-        } else if (eventName.contentEquals("ServerConnector.run")) {
-            if (status.contentEquals("failure")) {
-                uiBtnConnect.setEnabled(true);
-            }
+        } else if (event.getPhase() == Phase.DISCONNECT) {
+            // state doesn't matter
+
+            // enable connect button once again
+            uiBtnConnect.setEnabled(true);
         }
     }
 
