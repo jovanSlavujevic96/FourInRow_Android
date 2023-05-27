@@ -1,6 +1,5 @@
 package fourinrow.android.client.activities;
 
-import android.content.Intent;
 import android.os.Bundle;
 import android.widget.Button;
 import android.widget.EditText;
@@ -13,8 +12,8 @@ import fourinrow.android.client.network.ServerConnector;
 
 public class RegisterActivity extends EventHandlerActivity {
 
-    EditText uiName;
-    Button uiBtnRegister;
+    private EditText uiName;
+    private Button uiBtnRegister;
 
     @Override
     protected void uiThreadHandleImpl(Event event) {
@@ -23,7 +22,7 @@ public class RegisterActivity extends EventHandlerActivity {
             uiBtnRegister.setEnabled(false);
 
             // jump back to Connect Activity
-            startActivity(new Intent(this, ConnectActivity.class));
+            activityTransition(ConnectActivity.class);
         }
     }
 
@@ -35,7 +34,8 @@ public class RegisterActivity extends EventHandlerActivity {
         if (ServerConnector.getServer() != null) {
             ServerConnector.getServer().bindActivity(this);
         } else {
-            startActivity(new Intent(this, ConnectActivity.class));
+            // jump back to Connect Activity
+            activityTransition(ConnectActivity.class);
             return;
         }
 
@@ -48,12 +48,6 @@ public class RegisterActivity extends EventHandlerActivity {
                         .report(view);
             }
         });
-    }
-
-    public void openActivityGame() {
-        Intent intent = new Intent(this, MainActivityLog.class);
-
-        startActivity(intent);
     }
 }
 

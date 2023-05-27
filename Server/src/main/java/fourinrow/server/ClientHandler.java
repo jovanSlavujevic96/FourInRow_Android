@@ -11,7 +11,6 @@ import java.security.NoSuchAlgorithmException;
 import java.util.function.Consumer;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-import javax.xml.bind.DatatypeConverter;
 import org.json.simple.JSONObject;
 import org.json.simple.parser.JSONParser;
 import org.json.simple.parser.ParseException;
@@ -45,20 +44,6 @@ public class ClientHandler implements Runnable {
     
     public PrintWriter getPw() {
         return pw;
-    }
-    
-    // make MD5 hash from entered string
-    private String hash(String inputStr) {
-        try {
-            MessageDigest md = MessageDigest.getInstance("MD5");
-            md.update(inputStr.getBytes());
-            byte[] digest = md.digest();
-            return DatatypeConverter.printHexBinary(digest).toUpperCase();
-        } catch (NoSuchAlgorithmException ex) {
-            // cannot occur -> MD5 exists
-            Logger.getLogger(ClientHandler.class.getName()).log(Level.SEVERE, null, ex);
-        }
-        return "";
     }
     
     public ClientHandler(Socket socket, Consumer<ClientHandler> logoutMethod) throws IOException {

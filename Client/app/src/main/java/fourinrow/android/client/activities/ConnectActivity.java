@@ -2,6 +2,7 @@ package fourinrow.android.client.activities;
 
 import android.content.Intent;
 import android.os.Bundle;
+import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
 
@@ -18,9 +19,9 @@ import fourinrow.android.client.states.State;
 
 public class ConnectActivity extends EventHandlerActivity {
 
-    EditText uiIpAddress;
-    EditText uiPort;
-    Button uiBtnConnect;
+    private EditText uiIpAddress;
+    private EditText uiPort;
+    private Button uiBtnConnect;
 
     @Override
     protected void uiThreadHandleImpl(Event event) {
@@ -31,12 +32,14 @@ public class ConnectActivity extends EventHandlerActivity {
                     uiBtnConnect.setEnabled(false);
 
                     // start visualization of pending animation
+                    findViewById(R.id.loadingPanel).setVisibility(View.VISIBLE);
                     break;
                 case FAILURE:
                     // enable connect button once again
                     uiBtnConnect.setEnabled(true);
 
                     // end visualization of pending animation
+                    findViewById(R.id.loadingPanel).setVisibility(View.GONE);
                     break;
                 case SUCCESS:
                     // disable connect button
@@ -44,6 +47,9 @@ public class ConnectActivity extends EventHandlerActivity {
 
                     // open another activity window
                     activityTransition(RegisterActivity.class);
+
+                    // end visualization of pending animation
+                    findViewById(R.id.loadingPanel).setVisibility(View.GONE);
                     break;
                 default:
                     break;

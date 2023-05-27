@@ -26,7 +26,7 @@ public abstract class EventHandlerActivity extends AppCompatActivity {
             public void run() {
                 startActivity(new Intent(currentActivity, nextActivityClass));
             }
-        }, 2 * 1000);
+        }, 1000);
     }
     protected abstract void uiThreadHandleImpl(Event event);
 }
