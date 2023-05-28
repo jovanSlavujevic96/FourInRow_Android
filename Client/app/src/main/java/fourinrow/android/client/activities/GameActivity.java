@@ -10,9 +10,9 @@ import android.widget.Toast;
 
 import fourinrow.android.client.R;
 
-public class MainActivityLog extends AppCompatActivity implements View.OnClickListener {
+public class GameActivity extends AppCompatActivity implements View.OnClickListener {
 
-    private Button[][] buttons = new Button[3][3];
+    private Button[][] buttons = new Button[7][6];
 
     private boolean player1Turn = true;
 
@@ -27,7 +27,7 @@ public class MainActivityLog extends AppCompatActivity implements View.OnClickLi
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_main_log);
+        setContentView(R.layout.activity_game);
 
         textViewPlayer1 = findViewById(R.id.text_view_p1);
         textViewPlayer2 = findViewById(R.id.text_view_p2);

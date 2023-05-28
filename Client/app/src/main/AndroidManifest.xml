@@ -9,23 +9,26 @@
         android:label="@string/app_name"
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
-        android:theme="@style/Theme.ClientAsyncTask"
-    >
-        <activity android:name=".activities.MainActivityLog" />
+        android:theme="@style/Theme.ClientAsyncTask">
         <activity
-            android:screenOrientation="landscape"
+            android:name=".activities.ChooseOpponentActivity"
+            android:exported="false"
+            android:screenOrientation="landscape" />
+        <activity android:name=".activities.GameActivity" />
+        <activity
             android:name=".activities.ConnectActivity"
-            android:exported="true">
+            android:exported="true"
+            android:screenOrientation="landscape">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
+
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
         <activity
-            android:screenOrientation="landscape"
             android:name=".activities.RegisterActivity"
-            android:exported="true">
-        </activity>
+            android:exported="true"
+            android:screenOrientation="landscape" />
     </application>
 
 </manifest>

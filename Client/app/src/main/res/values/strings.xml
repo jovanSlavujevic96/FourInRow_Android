@@ -59,4 +59,7 @@
     </string>
     <string name="unesite_ime">Unesite ime:</string>
     <string name="registruj_se">Registruj se</string>
+    <string name="izaberite_protivnika">Izaberite protivnika:</string>
+    <string name="zahtevaj_igru">Zahtevaj igru</string>
+    <string name="osvezi">Osvezi</string>
 </resources>

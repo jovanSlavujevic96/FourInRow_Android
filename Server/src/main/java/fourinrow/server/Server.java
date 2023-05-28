@@ -13,10 +13,39 @@ import java.util.logging.Logger;
  * @author Jovan
  */
 public class Server {
-    private ServerSocket acceptSocket;
-    private final Collection<ClientHandler> clients;
+    private static Server server = null;
     
-    public void acceptClients() throws IOException {
+    public static Server createServer(int port) {
+        server = new Server(port);
+        return server;
+    }
+
+    public static Server getServer() {
+        return server;
+    }
+
+    private ServerSocket acceptSocket;
+    private final int port;
+    private final Collection<ClientHandler> clients;
+
+    public ClientHandler findClinet(String name) {
+        for (ClientHandler client : clients) {
+            if (client.getName().equalsIgnoreCase(name)) {
+                return client;
+            }
+        }
+        return null;
+    }
+    
+    public void removeClient(ClientHandler client) {
+        clients.remove(client);
+    }
+    
+    public Collection<ClientHandler> getClients() {
+        return clients;
+    }
+    
+    private void acceptClients() throws IOException {
         Socket client_socket;
         Thread client_thread;
         ClientHandler client_handler;
@@ -38,7 +67,7 @@ public class Server {
             // create new client handler for connected client
             // logout method is actually removing created client handler from list
             try {
-                client_handler = new ClientHandler(client_socket, (n) -> { clients.remove(n); });
+                client_handler = new ClientHandler(client_socket);
             } catch (IOException ex) {
                 Logger.getLogger(Server.class.getName()).log(Level.SEVERE, null, ex);
                 break;
@@ -53,35 +82,37 @@ public class Server {
 
         // safe exit
         for (ClientHandler client : clients) {
-            client.getSocket().shutdownOutput();
-            client.getSocket().shutdownInput();
-            client.getSocket().close();
+            client.disconnect();
         }
         acceptSocket.close();
     }
     
-    public Server(int port) throws IOException {
+    private Server initServer() throws IOException {
         try {
             this.acceptSocket = new ServerSocket(port);
         } catch (IOException ex) {
             // just disclaimer
             throw ex;
         }
+        return this;
+    }
+
+    private Server(int port) {
+        this.port = port;
         clients = new ArrayList();
     }
     
     public static void main(String[] args) {
-        Server server;
-        
         final int port = 8080;
-        System.out.println("Server port is " + port);
-        
+        System.out.println("Running server on port " + port + " ...");
         try {
-            server = new Server(port);
-            server.acceptClients();
-
+            Server
+                .createServer(port)
+                .initServer()
+                .acceptClients();
         } catch (IOException ex) {
-            System.out.println("StickerServer create failed: " + ex.toString());
+            System.out.println("Server running failed due to: ");
+            System.out.println(ex.toString());
         }
     }
 }

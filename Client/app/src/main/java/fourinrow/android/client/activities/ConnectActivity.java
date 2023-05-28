@@ -25,7 +25,12 @@ public class ConnectActivity extends EventHandlerActivity {
 
     @Override
     protected void uiThreadHandleImpl(Event event) {
-        if (event.getPhase() == Phase.CONNECT) {
+        if (event.getPhase() == Phase.DISCONNECT) {
+            // state doesn't matter
+
+            // enable connect button
+            uiBtnConnect.setEnabled(true);
+        } else if (event.getPhase() == Phase.CONNECT) {
             switch(event.getState()) {
                 case START:
                     // disable connect button
@@ -39,7 +44,7 @@ public class ConnectActivity extends EventHandlerActivity {
                     uiBtnConnect.setEnabled(true);
 
                     // end visualization of pending animation
-                    findViewById(R.id.loadingPanel).setVisibility(View.GONE);
+                    findViewById(R.id.loadingPanel).setVisibility(View.INVISIBLE);
                     break;
                 case SUCCESS:
                     // disable connect button
@@ -54,11 +59,6 @@ public class ConnectActivity extends EventHandlerActivity {
                 default:
                     break;
             }
-        } else if (event.getPhase() == Phase.DISCONNECT) {
-            // state doesn't matter
-
-            // enable connect button once again
-            uiBtnConnect.setEnabled(true);
         }
     }
 
@@ -69,13 +69,7 @@ public class ConnectActivity extends EventHandlerActivity {
 
         uiIpAddress = findViewById(R.id.uiIpAddressInput);
         uiPort = findViewById(R.id.uiPortInput);
-//        uiName = findViewById(R.id.etRegistracija);
-
         uiBtnConnect = findViewById(R.id.uiConnectBtn);
-//        uiBtnRegister = findViewById(R.id.btnRegister);
-//        uiBtnPlay = findViewById(R.id.btnPlay);
-
-//        spnUsers = findViewById(R.id.spnUsers);
 
         uiBtnConnect.setOnClickListener(view -> {
             String ip = uiIpAddress.getText().toString();
@@ -104,27 +98,6 @@ public class ConnectActivity extends EventHandlerActivity {
                     .newSingleThreadExecutor()
                     .execute(ServerConnector.getServer());
         });
-
-//        uiBtnRegister.setOnClickListener(view -> {
-//            String ime = uiName.getText().toString();
-//
-//            MessageSender.sendMessage(output, ime);
-//        });
-
-        //Pedja: dodao dugme za igranje, ono drugo mislim da je za registraciju
-//        uiBtnPlay.setOnClickListener(view -> {
-//            String playWith = spnUsers.getSelectedItem().toString();
-//            //dodaj samo proveru da li je odabran korektan korisnik da se igra sa njim, ne mozes sam sa sobom
-//            //ja ovde to ne proveravam samo da vidim da li je uopste stiglo do servera sta sam odabrao
-//            //if (!playWith.equals(MainActivity.this.name))
-//            MessageSender.sendMessage(output, spnUsers.getSelectedItem().toString());
-//        });
-    }
-
-    public void openActivityGame() {
-        Intent intent = new Intent(this, MainActivityLog.class);
-
-        startActivity(intent);
     }
 }
 

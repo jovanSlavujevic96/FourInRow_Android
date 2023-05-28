@@ -1,11 +1,17 @@
 package fourinrow.android.client.network;
 
+import org.json.simple.JSONArray;
+import org.json.simple.JSONObject;
+import org.json.simple.parser.JSONParser;
+import org.json.simple.parser.ParseException;
+
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.PrintWriter;
 import java.net.Socket;
 import java.net.SocketAddress;
+import java.util.Objects;
 
 import fourinrow.android.client.states.Event;
 import fourinrow.android.client.states.Phase;
@@ -113,26 +119,103 @@ public class ServerConnector implements Runnable {
         pw = null;
     }
 
-    String processMessage(String in) {
-        return "";
+    String getJsonString(JSONObject json, String key) {
+        return Objects.requireNonNull(json.get(key)).toString();
     }
 
-//    //Pedja:Bice pozvana kada se pozove publishProgress, ali se izvrsava u okviru UI niti, sto znaci
-//    //da u njoj mozemo bezbedno raditi sa UI komponentama, u nasem slucaju sa Spinnerom
-//    protected void onProgressUpdate(String... values){
-//        super.onProgressUpdate(values);
-//        String [] arr = new String[values.length - 1];// necu staviti Users: u niz
-//        int i = 0;
-//        for (String str : values){
-//            //nemoj dodati Users string u korisnike koji su povezani
-//            if (!str.startsWith("Users:"))
-//                arr[i++] = str;
-//        }
-//        ArrayAdapter<String> aa = new ArrayAdapter<>(MainActivity.this, android.R.layout.simple_spinner_item, arr);
-//        aa.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
-//        spnUsers.setAdapter(aa);
-//
-//    }
+    String processMessage(String in) {
+        JSONParser parser = new JSONParser();
+        JSONObject jsonIn;
+        // parse JSON Object
+        try {
+            jsonIn = (JSONObject)parser.parse(in);
+        } catch (ParseException parsE) {
+            activity.handleEvent(
+                    new Event (Phase.PARSE, State.FAILURE),
+                    new Report(parsE, "Greska: Problemi prilikom parsiranja poruke. Pokusajte ponovo poslati zahtev")
+            );
+            // no need for reply
+            return "";
+        }
+
+        String method = getJsonString(jsonIn, "method");
+        String message = getJsonString(jsonIn, "message");
+        String status = getJsonString(jsonIn, "status");
+        if (method.isEmpty() || message.isEmpty() || status.isEmpty()) {
+            activity.handleEvent(
+                    new Event (Phase.PARSE, State.FAILURE),
+                    new Report(
+                            null,
+                            "Greska: Nepotpun odgovor od strane servera"
+                    )
+            );
+            // no need for reply
+            return "";
+        }
+
+        State state;
+        String activityMessage = "";
+        Phase phase;
+        String reply = "";
+        Object data = null;
+
+        if (method.equalsIgnoreCase("register")) {
+            phase = Phase.REGISTER;
+            state = (status.contentEquals("200")) ? State.SUCCESS : State.FAILURE;
+            activityMessage = (status.contentEquals("200")) ? String.copyValueOf(message.toCharArray()) : "Greska(" + status + "): " + message;
+        } else if (method.equalsIgnoreCase("refresh")) {
+            phase = Phase.REFRESH;
+            state = (status.contentEquals("200")) ? State.SUCCESS : State.FAILURE;
+
+            if (state == State.SUCCESS) {
+                if (jsonIn.get("users") instanceof JSONArray jsonUsers) {
+                    if (jsonUsers.isEmpty()) {
+                        state = State.FAILURE;
+                        activityMessage = "Nazalost trenutno nema potencijalnih protivnika za igru";
+                    } else {
+                        data = jsonUsers;
+                        // activity message in if below
+                    }
+                } else {
+                    state = State.FAILURE;
+                    activityMessage = "Greska: Nisu poslati korisnici";
+                }
+            }
+
+            if (activityMessage.isEmpty()) { // handles two condition variants
+                activityMessage = (state == State.SUCCESS) ? String.copyValueOf(message.toCharArray()) : "Greska(" + status + "): " + message;
+            }
+        } else if (method.equalsIgnoreCase("requestPlay")) {
+            // reply from your request to another player
+            phase = Phase.REQUEST_PLAY;
+
+            if (status.contentEquals("201")) {
+                state = State.HOLD; // just infomation from server that req to opponent has been sent
+            } else if (status.contentEquals("202")) {
+                state = State.SUCCESS; // accepted
+            } else {
+                state = State.FAILURE; // rejected
+            }
+            activityMessage = message;
+        } else if (method.equalsIgnoreCase("requestPlayOffer")) {
+            // got offer from another player
+            phase = Phase.REQUEST_PLAY_OFFER;
+
+            if (status.contentEquals("201")) {
+                data = jsonIn.get("opponent");
+                state = State.HOLD; // just infomation from server that req to opponent has been sent
+            } else if (status.contentEquals("202")) {
+                state = State.SUCCESS; // accepted
+            } else {
+                state = State.FAILURE; // rejected
+            }
+            activityMessage = message;
+        } else {
+            return "";
+        }
+        activity.handleEvent(new Event(phase, state, data), new Report(null, activityMessage));
+        return reply;
+    }
 
     @Override
     public void run() {

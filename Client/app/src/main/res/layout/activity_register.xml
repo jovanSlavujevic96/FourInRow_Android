@@ -30,7 +30,8 @@
                 android:minHeight="50sp"
                 android:hint="@string/unesite_ime"
                 android:textSize="40sp"
-                tools:ignore="LabelFor"
+                android:textColorHint="@color/black"
+                android:background="@color/white"
             />
             <Button
                 android:id="@+id/uiRegisterBtn"
@@ -49,13 +50,12 @@
         android:layout_height="match_parent"
         android:gravity="center"
         android:visibility="invisible"
-        >
-
+    >
         <ProgressBar
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:indeterminate="true"
-            />
+        />
     </RelativeLayout>
 
 </RelativeLayout>
