@@ -207,7 +207,7 @@ public class ServerConnector implements Runnable {
             } else if (status.contentEquals("202")) {
                 state = State.SUCCESS; // accepted
             } else {
-                state = State.FAILURE; // rejected
+                state = State.FAILURE; // rejected or some other occurrence
             }
             activityMessage = message;
         } else {
