@@ -1,6 +1,5 @@
 package fourinrow.android.client.activities;
 
-import android.content.Intent;
 import android.os.Bundle;
 import android.view.View;
 import android.widget.Button;
@@ -8,14 +7,12 @@ import android.widget.EditText;
 
 import java.net.InetSocketAddress;
 import java.util.concurrent.Executors;
-import java.util.concurrent.TimeUnit;
 
 import fourinrow.android.client.R;
 import fourinrow.android.client.states.Event;
 import fourinrow.android.client.states.Phase;
 import fourinrow.android.client.states.Report;
 import fourinrow.android.client.network.ServerConnector;
-import fourinrow.android.client.states.State;
 
 public class ConnectActivity extends EventHandlerActivity {
 

@@ -1,9 +1,7 @@
 package fourinrow.android.client.states;
 
-import org.json.JSONObject;
-
 public class Event {
-    private Phase phase;
+    final private Phase phase;
     private State state;
     private Object data;
 
@@ -27,5 +25,4 @@ public class Event {
         return state;
     }
     public Object getData() { return data; }
-
 }

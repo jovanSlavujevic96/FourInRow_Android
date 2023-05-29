@@ -2,11 +2,9 @@ package fourinrow.android.client.activities;
 
 import androidx.core.content.ContextCompat;
 
-import android.graphics.PorterDuff;
 import android.os.Bundle;
 import android.view.View;
 import android.widget.Button;
-import android.widget.RelativeLayout;
 import android.widget.TextView;
 
 import java.util.HashMap;
