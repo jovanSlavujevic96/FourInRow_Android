@@ -30,7 +30,7 @@ public class Server {
 
     public ClientHandler findClinet(String name) {
         for (ClientHandler client : clients) {
-            if (client.getName().equalsIgnoreCase(name)) {
+            if (client != null && client.getName().equalsIgnoreCase(name)) {
                 return client;
             }
         }
