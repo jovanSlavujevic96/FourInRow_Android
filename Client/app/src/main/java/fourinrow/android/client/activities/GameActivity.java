@@ -1,139 +1,78 @@
 package fourinrow.android.client.activities;
 
-import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.content.ContextCompat;
 
+import android.graphics.PorterDuff;
 import android.os.Bundle;
 import android.view.View;
 import android.widget.Button;
+import android.widget.RelativeLayout;
 import android.widget.TextView;
-import android.widget.Toast;
+
+import java.util.HashMap;
+import java.util.Map;
 
 import fourinrow.android.client.R;
+import fourinrow.android.client.network.ServerConnector;
+import fourinrow.android.client.states.Event;
 
-public class GameActivity extends AppCompatActivity implements View.OnClickListener {
+public class GameActivity extends EventHandlerActivity {
 
-    private Button[][] buttons = new Button[7][6];
+    final private Button[][] buttons = new Button[7][6];
+    final private Map<Button, Boolean> buttonsUsed = new HashMap<>();
+    static final int[][] btnRIds = {
+            { R.id.button_0_0, R.id.button_0_1, R.id.button_0_2, R.id.button_0_3, R.id.button_0_4, R.id.button_0_5 },
+            { R.id.button_1_0, R.id.button_1_1, R.id.button_1_2, R.id.button_1_3, R.id.button_1_4, R.id.button_1_5 },
+            { R.id.button_2_0, R.id.button_2_1, R.id.button_2_2, R.id.button_2_3, R.id.button_2_4, R.id.button_2_5 },
+            { R.id.button_3_0, R.id.button_3_1, R.id.button_3_2, R.id.button_3_3, R.id.button_3_4, R.id.button_3_5 },
+            { R.id.button_4_0, R.id.button_4_1, R.id.button_4_2, R.id.button_4_3, R.id.button_4_4, R.id.button_4_5 },
+            { R.id.button_5_0, R.id.button_5_1, R.id.button_5_2, R.id.button_5_3, R.id.button_5_4, R.id.button_5_5 },
+            { R.id.button_6_0, R.id.button_6_1, R.id.button_6_2, R.id.button_6_3, R.id.button_6_4, R.id.button_6_5 },
+    };
 
-    private boolean player1Turn = true;
-
-    private int roundCount;
-
-    private int player1Points;
-    private int player2Points;
-
-    private TextView textViewPlayer1;
-    private TextView textViewPlayer2;
+    @Override
+    protected void uiThreadHandleImpl(Event event) {}
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_game);
 
-        textViewPlayer1 = findViewById(R.id.text_view_p1);
-        textViewPlayer2 = findViewById(R.id.text_view_p2);
+        TextView player1Name = findViewById(R.id.player1);
+        TextView player2Name = findViewById(R.id.player2);
 
-        for(int i = 0; i<3; i++) {
-            for(int j = 0; j<3; j++){
-                String buttonID = "button_" + i + j;
-                int resID = getResources().getIdentifier(buttonID, "id", getPackageName());
-                buttons[i][j] = findViewById(resID);
-                buttons[i][j].setOnClickListener(this);
+        ServerConnector.getServer().bindActivity(this);
+
+        if (ServerConnector.getServer().getPlayFirst()) {
+            player1Name.setText(ServerConnector.getServer().getPlayerName());
+            player2Name.setText(ServerConnector.getServer().getOpponentName());
+        } else {
+            player1Name.setText(ServerConnector.getServer().getOpponentName());
+            player2Name.setText(ServerConnector.getServer().getPlayerName());
+        }
+
+        for(int i = 0; i < 7; i++) {
+            int finalI = i;
+            View.OnClickListener listener = (view) -> {
+                Button buttonToBeSet = null;
+                for (int j = 5; j >= 0; j--) {
+                    if (buttons[finalI][j].isClickable()) {
+                        buttonToBeSet = buttons[finalI][j];
+                        break;
+                    }
+                }
+                if (buttonToBeSet != null) {
+                    buttonToBeSet.setClickable(false);
+                    buttonToBeSet.setBackgroundColor(ContextCompat.getColor(getApplicationContext(), R.color.red));
+                }
+            };
+            for(int j = 0; j < 6; j++) {
+                buttons[i][j] = findViewById(btnRIds[i][j]);
+                buttons[i][j].setClickable(true);
+                buttons[i][j].setOnClickListener(listener);
+                buttonsUsed.put(buttons[i][j], false);
             }
         }
     }
 
-    @Override
-    public void onClick(View v) {
-        if(!((Button) v).getText().toString().equals("")){
-            return;
-        }
-
-        if(player1Turn) {
-            ((Button) v).setText("X");
-        }else{
-            ((Button) v).setText("O");
-        }
-        roundCount++;
-
-        if(checkForWin()) {
-            if(player1Turn) {
-                player1Wins();
-            } else {
-                player2Wins();
-            }
-        } else if (roundCount == 9){
-            draw();
-        } else{
-            player1Turn = !player1Turn;
-        }
-
-    }
-    private boolean checkForWin(){
-        String[][] field = new String[3][3];
-
-        for(int i = 0; i<3;i++){
-            for(int j = 0; j<3; j++){
-                field[i][j] = buttons[i][j].getText().toString();
-            }
-        }
-
-        //rows
-        for(int i = 0; i < 3; i++){
-            if(field[i][0].equals(field[i][1]) && field[i][0].equals(field[i][2]) && !field[i][0].equals("")){
-                return true;
-            }
-        }
-
-        //colums
-        for(int i = 0; i < 3; i++){
-            if(field[0][i].equals(field[1][i]) && field[0][i].equals(field[2][i]) && !field[0][i].equals("")){
-                return true;
-            }
-        }
-
-        //diagonals
-        if(field[0][0].equals(field[1][1]) && field[0][0].equals(field[2][2]) && !field[0][0].equals("")){
-            return true;
-        }
-
-        if(field[0][2].equals(field[1][1]) && field[0][2].equals(field[2][0]) && !field[0][2].equals("")){
-            return true;
-        }
-
-        return false;
-    }
-
-    private void player1Wins() {
-        player1Points++;
-        Toast.makeText(this, "Player 1 wins!", Toast.LENGTH_SHORT).show();
-        updatePointsText();
-        resetBoard();
-    }
-
-    private void player2Wins() {
-        player2Points++;
-        Toast.makeText(this, "Player 2 wins!", Toast.LENGTH_SHORT).show();
-        updatePointsText();
-        resetBoard();
-    }
-
-    private void draw() {
-        Toast.makeText(this, "Draw!", Toast.LENGTH_SHORT).show();
-        resetBoard();
-    }
-
-    private void updatePointsText() {
-        textViewPlayer1.setText("Player 1: " + player1Points);
-        textViewPlayer2.setText("Player 2: " + player2Points);
-    }
-
-    private void resetBoard() {
-        for (int i = 0; i < 3; i++) {
-            for (int j = 0; j < 3; j++) {
-                buttons[i][j].setText("");
-            }
-        }
-        roundCount = 0;
-        player1Turn = true;
-    }
 }

@@ -12,9 +12,11 @@
         android:theme="@style/Theme.ClientAsyncTask">
         <activity
             android:name=".activities.ChooseOpponentActivity"
-            android:exported="false"
+            android:exported="true"
             android:screenOrientation="landscape" />
-        <activity android:name=".activities.GameActivity" />
+        <activity android:name=".activities.GameActivity"
+            android:exported="true"
+            android:screenOrientation="landscape" />
         <activity
             android:name=".activities.ConnectActivity"
             android:exported="true"

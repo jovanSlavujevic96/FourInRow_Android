@@ -65,7 +65,7 @@ public class RegisterActivity extends EventHandlerActivity {
                     activityTransition(ChooseOpponentActivity.class);
 
                     // set name to be known among the code
-                    ServerConnector.getServer().setName(uiName.getText().toString());
+                    ServerConnector.getServer().setPlayerName(uiName.getText().toString());
 
                     // end visualization of pending animation
                     findViewById(R.id.loadingPanel).setVisibility(View.GONE);

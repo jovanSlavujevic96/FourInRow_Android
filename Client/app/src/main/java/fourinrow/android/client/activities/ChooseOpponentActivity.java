@@ -70,10 +70,11 @@ public class ChooseOpponentActivity extends EventHandlerActivity {
 
         uiBtnRefresh.setOnClickListener(view -> refreshOpponents());
 
-        if (ServerConnector.getServer().getName() != null) {
-            uiName.setText(ServerConnector.getServer().getName());
-        } else {
+        String playerName = ServerConnector.getServer().getPlayerName();
+        if (playerName.isEmpty()) {
             uiName.setText(R.string.igrac);
+        } else {
+            uiName.setText(playerName);
         }
 
         refreshOpponents();
@@ -154,6 +155,10 @@ public class ChooseOpponentActivity extends EventHandlerActivity {
                     uiBtnRequestPlay.setEnabled(false);
                     uiSpinner.setClickable(false);
 
+                    // set opponentName & who plays first -> challenger plays first
+                    ServerConnector.getServer().setOpponentName(uiSpinner.getSelectedItem().toString());
+                    ServerConnector.getServer().setPlayFirst(true);
+
                     // start visualization of pending animation
                     findViewById(R.id.loadingPanel).setVisibility(View.VISIBLE);
                 }
@@ -162,6 +167,9 @@ public class ChooseOpponentActivity extends EventHandlerActivity {
                     uiBtnRefresh.setEnabled(true);
                     uiBtnRequestPlay.setEnabled(true);
                     uiSpinner.setClickable(true);
+
+                    // set opponentName
+                    ServerConnector.getServer().setOpponentName("");
 
                     // end visualization of pending animation
                     findViewById(R.id.loadingPanel).setVisibility(View.INVISIBLE);
@@ -201,6 +209,10 @@ public class ChooseOpponentActivity extends EventHandlerActivity {
                         return;
                     }
 
+                    // set opponentName
+                    ServerConnector.getServer().setOpponentName(opponent);
+                    ServerConnector.getServer().setPlayFirst(false);
+
                     gameOfferDialog = alertDisplay(
                             "ZAHTEV ZA IGRU",
                             "Igrac " + opponent + " Vas poziva na partiju.\r\n" +
@@ -233,6 +245,9 @@ public class ChooseOpponentActivity extends EventHandlerActivity {
                     uiBtnRefresh.setEnabled(true);
                     uiBtnRequestPlay.setEnabled(true);
                     uiSpinner.setClickable(true);
+
+                    // set opponentName
+                    ServerConnector.getServer().setOpponentName("");
 
                     // if dialog existed removed it
                     if (gameOfferDialog != null) {

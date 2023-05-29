@@ -25,7 +25,10 @@ public class ServerConnector implements Runnable {
     private BufferedReader br;
     private PrintWriter pw;
     private EventHandlerActivity activity = null;
-    private String name = null; // player name
+
+    private String playerName = ""; // player name
+    private String opponentName = ""; // opponent name
+    private boolean playFirst;
 
     static private ServerConnector server = null;
 
@@ -46,8 +49,14 @@ public class ServerConnector implements Runnable {
         this.activity = activity;
     }
 
-    public void setName(String name) { this.name = name; }
-    public String getName() { return name; }
+    public void setPlayerName(String name) { playerName = name; }
+    public String getPlayerName() { return playerName; }
+
+    public void setOpponentName(String name) { opponentName = name; }
+    public String getOpponentName() { return opponentName; }
+
+    public void setPlayFirst(boolean first) { playFirst = first; }
+    public boolean getPlayFirst() { return playFirst; }
 
     PrintWriter getPw() { return pw; }
 

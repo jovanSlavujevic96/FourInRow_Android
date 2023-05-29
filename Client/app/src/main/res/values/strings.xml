@@ -11,4 +11,6 @@
     <string name="zahtevaj_igru">Zahtevaj igru</string>
     <string name="osvezi">Osvezi</string>
     <string name="igrac">Igrac</string>
+    <string name="igrac_1">Igrac 1:</string>
+    <string name="igrac_2">Igrac 2:</string>
 </resources>
