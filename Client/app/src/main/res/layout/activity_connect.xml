@@ -5,6 +5,7 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     tools:context=".activities.ConnectActivity"
+    android:background="#FFD700"
 >
 
     <RelativeLayout
@@ -23,7 +24,7 @@
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:textSize="40sp"
+                android:textSize="24sp"
                 android:text="@string/ip_adresa"
                 android:textColor="@color/black"
             />
@@ -35,9 +36,9 @@
                 android:autofillHints="IP address"
                 android:ems="8"
                 android:inputType="text"
-                android:minHeight="50sp"
+                android:minHeight="26sp"
                 android:text="@string/ip_adresa_value"
-                android:textSize="40sp"
+                android:textSize="24sp"
                 tools:ignore="LabelFor"
             />
         </LinearLayout>
@@ -52,9 +53,9 @@
                 android:layout_height="wrap_content"
                 android:text="@string/port"
                 android:textColor="@color/black"
-                android:textSize="40sp"
-                android:layout_marginStart="92dp"
-                android:layout_marginLeft="92dp"
+                android:textSize="24sp"
+                android:layout_marginStart="55dp"
+                android:layout_marginLeft="55dp"
             />
 
             <EditText
@@ -64,9 +65,9 @@
                 android:autofillHints="port"
                 android:ems="8"
                 android:inputType="text"
-                android:minHeight="50sp"
+                android:minHeight="26sp"
                 android:text="@string/port_value"
-                android:textSize="40sp"
+                android:textSize="24sp"
                 tools:ignore="LabelFor"
             />
         </LinearLayout>
@@ -77,10 +78,9 @@
             android:baselineAligned="true"
             android:text="@string/povezi_se"
             android:layout_below="@id/linPort"
-            android:textSize="42sp"
+            android:textSize="24sp"
             android:layout_marginTop="20dp"
-            android:layout_marginLeft="320dp"
-            android:layout_marginStart="320dp"
+            android:layout_centerHorizontal="true"
         />
     </RelativeLayout>
     <RelativeLayout

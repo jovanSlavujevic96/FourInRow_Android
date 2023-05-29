@@ -5,6 +5,7 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     tools:context=".activities.ChooseOpponentActivity"
+    android:background="#00FFFF"
 >
     <RelativeLayout
         android:layout_width="match_parent"
@@ -38,11 +39,10 @@
             <Spinner
                 android:id="@+id/uiOpponentSpinner"
                 android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:minWidth="40sp"
-                android:layout_weight="1"
-                android:spinnerMode="dropdown"
-            />
+                android:layout_height="48dp"
+                android:layout_weight="2"
+                android:minWidth="48dp"
+                android:spinnerMode="dropdown"/>
             <View
                 android:layout_width="0dp"
                 android:layout_height="0dp"
@@ -70,7 +70,19 @@
         android:textSize="18sp"
         android:text="@string/osvezi"
         android:layout_alignParentRight="true"
-    />
+        tools:ignore="RelativeOverlap"
+        android:layout_alignParentEnd="true" />
+
+    <TextView
+        android:id="@+id/uiName"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:textSize="20sp"
+        android:textStyle="bold|italic"
+        android:text="@string/igrac"
+        android:layout_alignParentLeft="true"
+        tools:ignore="RelativeOverlap"
+        android:layout_alignParentStart="true" />
 
     <RelativeLayout
         android:id="@+id/loadingPanel"

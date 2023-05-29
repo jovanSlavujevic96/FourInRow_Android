@@ -5,6 +5,7 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     tools:context=".activities.RegisterActivity"
+    android:background="#FFFF00"
 >
 
     <RelativeLayout
@@ -29,9 +30,8 @@
                 android:inputType="text"
                 android:minHeight="50sp"
                 android:hint="@string/unesite_ime"
-                android:textSize="40sp"
-                android:textColorHint="@color/black"
-                android:background="@color/white"
+                android:textSize="24sp"
+                android:textColorHint="#808080"
             />
             <Button
                 android:id="@+id/uiRegisterBtn"
@@ -39,7 +39,7 @@
                 android:layout_height="wrap_content"
                 android:baselineAligned="true"
                 android:text="@string/registruj_se"
-                android:textSize="42sp"
+                android:textSize="24sp"
             />
         </LinearLayout>
 

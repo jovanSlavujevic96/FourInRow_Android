@@ -124,7 +124,7 @@ public class ChooseOpponentActivity extends EventHandlerActivity {
                             uiBtnRequestPlay.setEnabled(false);
                         } else {
                             //Creating the ArrayAdapter instance having the country list
-                            ArrayAdapter<String> adapter = new ArrayAdapter<>(this, android.R.layout.simple_spinner_item, users);
+                            ArrayAdapter<String> adapter = new ArrayAdapter<>(this, R.layout.spinner_item, users);
                             adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
                             //Setting the ArrayAdapter data on the Spinner
                             uiSpinner.setAdapter(adapter);

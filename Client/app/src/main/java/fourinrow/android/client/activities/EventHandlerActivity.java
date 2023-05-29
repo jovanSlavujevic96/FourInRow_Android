@@ -34,9 +34,9 @@ public abstract class EventHandlerActivity extends AppCompatActivity {
     }
 
     final protected AlertDialog alertDisplay(String title,
-                                                                    String message,
-                                                                    DialogInterface.OnClickListener yesListener,
-                                                                    DialogInterface.OnClickListener noListener) {
+                                             String message,
+                                             DialogInterface.OnClickListener yesListener,
+                                             DialogInterface.OnClickListener noListener) {
 
         return new AlertDialog.Builder(this)
                 .setTitle(title)
