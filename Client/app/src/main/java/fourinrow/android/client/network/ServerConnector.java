@@ -25,6 +25,7 @@ public class ServerConnector implements Runnable {
     private BufferedReader br;
     private PrintWriter pw;
     private EventHandlerActivity activity = null;
+    private String name = null; // player name
 
     static private ServerConnector server = null;
 
@@ -44,6 +45,9 @@ public class ServerConnector implements Runnable {
     public void bindActivity(EventHandlerActivity activity) {
         this.activity = activity;
     }
+
+    public void setName(String name) { this.name = name; }
+    public String getName() { return name; }
 
     PrintWriter getPw() { return pw; }
 

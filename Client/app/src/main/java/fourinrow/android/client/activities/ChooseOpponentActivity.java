@@ -6,6 +6,7 @@ import android.view.View;
 import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.Spinner;
+import android.widget.TextView;
 
 import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
@@ -28,6 +29,7 @@ public class ChooseOpponentActivity extends EventHandlerActivity {
     private Spinner uiSpinner;
     private Button uiBtnRequestPlay;
     private Button uiBtnRefresh;
+    private TextView uiName;
     private AlertDialog gameOfferDialog = null;
 
     private void refreshOpponents() {
@@ -46,6 +48,7 @@ public class ChooseOpponentActivity extends EventHandlerActivity {
         uiSpinner = findViewById(R.id.uiOpponentSpinner);
         uiBtnRequestPlay = findViewById(R.id.uiRequestPlayBtn);
         uiBtnRefresh = findViewById(R.id.uiRefreshBtn);
+        uiName = findViewById(R.id.uiName);
 
         ServerConnector.getServer().bindActivity(this);
 
@@ -66,6 +69,12 @@ public class ChooseOpponentActivity extends EventHandlerActivity {
         });
 
         uiBtnRefresh.setOnClickListener(view -> refreshOpponents());
+
+        if (ServerConnector.getServer().getName() != null) {
+            uiName.setText(ServerConnector.getServer().getName());
+        } else {
+            uiName.setText(R.string.igrac);
+        }
 
         refreshOpponents();
     }

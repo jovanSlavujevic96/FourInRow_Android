@@ -64,6 +64,9 @@ public class RegisterActivity extends EventHandlerActivity {
                     // open another activity window
                     activityTransition(ChooseOpponentActivity.class);
 
+                    // set name to be known among the code
+                    ServerConnector.getServer().setName(uiName.getText().toString());
+
                     // end visualization of pending animation
                     findViewById(R.id.loadingPanel).setVisibility(View.GONE);
                 }
