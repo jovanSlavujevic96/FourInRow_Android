@@ -6,6 +6,7 @@ import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
 import java.io.PrintWriter;
 import java.net.Socket;
+import java.util.Objects;
 import java.util.Timer;
 import java.util.TimerTask;
 import org.json.simple.JSONArray;
@@ -34,6 +35,7 @@ public class ClientHandler implements Runnable {
         REFRESH,
         REQUEST_PLAY,
         REQUEST_PLAY_OFFER,
+        PLAY,
     }
     
     static private Phase StringToPhase(String phaseStr) {
@@ -51,6 +53,8 @@ public class ClientHandler implements Runnable {
             return Phase.REQUEST_PLAY;
         } else if (phaseStr.equalsIgnoreCase("requestPlayOffer")) {
             return Phase.REQUEST_PLAY_OFFER;
+        } else if (phaseStr.equalsIgnoreCase("play")) {
+            return Phase.PLAY;
         }
         return Phase.NONE;
     }
@@ -64,6 +68,7 @@ public class ClientHandler implements Runnable {
             case REFRESH -> "refresh";
             case REQUEST_PLAY -> "requestPlay";
             case REQUEST_PLAY_OFFER -> "requestPlayOffer";
+            case PLAY -> "play";
             default -> "none";
         };
     }
@@ -135,217 +140,293 @@ public class ClientHandler implements Runnable {
     public String processMessage(String msg) {
         JSONObject out = new JSONObject();
         JSONParser parser = new JSONParser();
-		
+
+        JSONObject in;
         try {
             // parse JSON Object
-            JSONObject in = (JSONObject)parser.parse(msg);
-
-            // look for method
-            String method;
-            if (in.get("method") != null) {
-                method = in.get("method").toString();
-            } else {
-                out.put("status", "400");
-                out.put("message", "Zahtev nije poslat");
-                return out.toJSONString();
-            }
-            
-            if (method.equalsIgnoreCase("register")) {
-                out.put("method", "register");
-                if (name.isEmpty()) {
-                    // read username
-                    if (in.get("name") == null) {
-                        out.put("status", "400");
-                        out.put("message", "Korisnicko ime nije poslato");
-                    } else {
-                        String inName = in.get("name").toString();
-                        if (inName.isBlank() || inName.isEmpty()) {
-                            out.put("status", "400");
-                            out.put("message", "Poslato je prazno korisnicko ime");
-                        } else if (!inName.matches("^(?=\\s*\\S).{1,15}$")) {
-                            out.put("status", "400");
-                            out.put("message", "Uneto ime ne sme imati razmake i vise od 15 karaktera");
-                        } else if (Server.getServer().findClinet(inName) != null) {
-                            out.put("status", "400");
-                            out.put("message", "Korisnik sa imenom " + inName + " vec postoji");
-                        } else {
-                            phase = Phase.REGISTER;
-                            name = inName;
-                            out.put("status", "200");
-                            out.put("message", "Korisnik sa imenom " + name + " je uspesno registrovan");
-                        }
-                    }
-                } else {
-                    // should not be possible from UI part
-                    out.put("status", "400");
-                    out.put("message", "Korisnik je vec registrovan");
-                }
-            } else if (method.equalsIgnoreCase("refresh")) {
-                out.put("method", "refresh");
-                if (name.isEmpty()) {
-                    out.put("status", "400");
-                    out.put("message", "Morate se registrovati pre nego sto nastavite dalje");
-                } else {
-                    phase = Phase.REFRESH;
-                    out.put("status", "200");
-                    out.put("message", "Korisnik je uspesno preuzeo listu potencijalnih protivnika");
-
-                    JSONArray users = new JSONArray();
-                    for (ClientHandler client : Server.getServer().getClients()) {
-                        if (client != this && !client.busy) {
-                            JSONObject user = new JSONObject();
-                            user.put("name", client.name);
-                            users.add(user);
-                        }
-                    }
-                    out.put("users", users);
-                }
-            }
-            // message from player who wants to request play to another player
-            else if (method.equalsIgnoreCase("requestPlay")) {
-                out.put("method", "requestPlay");
-                if (name.isEmpty()) {
-                    out.put("status", "400");
-                    out.put("message", "Morate se registrovati pre nego sto nastavite dalje");
-                } else {
-                    // look for opponent
-                    if (in.get("opponent") != null) {
-                        opponentName = in.get("opponent").toString();
-                    } else {
-                        out.put("status", "400");
-                        out.put("message", "Nije naveden protivnik u zahtevu za igru");
-                        return out.toJSONString();
-                    }
-                    
-                    // check the opponent
-                    ClientHandler opponentHandler = Server.getServer().findClinet(opponentName);
-                    if (opponentHandler == null || !opponentHandler.isAlive()) {
-                        out.put("status", "404");
-                        out.put("message", "Korisnik " + opponentName + " nije pronadjen");
-                        opponentName = "";
-                    } else if (opponentHandler.busy) {
-                        out.put("status", "400");
-                        out.put("message", "Korisnik " + opponentName + " je vec u igri");
-                        opponentName = "";
-                    } else {
-                        phase = Phase.REQUEST_PLAY;
-                        out.put("status", "201"); // 201 -> created (HOLD as reply)
-                        out.put("message", "Zahtev za igru je uspesno poslat korisniku " + opponentName);
-                        
-                        // make them unavailable for other players, even if they don't agree to play
-                        busy = true;
-                        opponentHandler.busy = true;
-                        opponentHandler.opponentName = name;
-                        opponentName = opponentHandler.name;
-
-                        // send offer to another player in detached thread
-                        new Timer("requestPlayOffer")
-                                .schedule(
-                                        new TimerTask() {
-                                            @Override
-                                            public void run() {
-                                                JSONObject jsonReqToOpponent = new JSONObject();
-                                                jsonReqToOpponent.put("method", "requestPlayOffer");
-                                                jsonReqToOpponent.put("message", "Zahtev za igru je poslat od strane korisnika " + name);
-                                                jsonReqToOpponent.put("status", "201");
-                                                jsonReqToOpponent.put("opponent", name);
-
-                                                opponentHandler.phase = Phase.REQUEST_PLAY_OFFER;
-                                                opponentHandler.sendRequest(jsonReqToOpponent.toJSONString());
-                                            }
-                                        }, 1500L // wait for 1.5 sec
-                                );
-                    }
-
-                }
-            }
-            // message from player who answers to request play from another player
-            else if (method.equalsIgnoreCase("requestPlayOffer")) {
-                out.put("method", "requestPlayOffer");
-                if (name.isEmpty()) {
-                    out.put("status", "400");
-                    out.put("message", "Morate se registrovati pre nego sto nastavite dalje");
-                } else {
-                    // look for method
-                    String accept;
-                    if (in.get("accept") != null) {
-                        accept = in.get("accept").toString();
-                    } else {
-                        out.put("status", "400");
-                        out.put("message", "Nepotpun odgovor na ponudu protivnika");
-                        return out.toJSONString();
-                    }
-                    
-                    // player must be set to busy and have the opponent name set from another thread
-                    if (!busy || opponentName.isEmpty()) {
-                        // clear them both then
-                        busy = false;
-                        opponentName = "";
-                        
-                        out.put("status", "400");
-                        out.put("message", "Veza sa protivnikom je pukla");
-                        return out.toJSONString();
-                    }
-                    
-                    // check the opponent
-                    ClientHandler opponentHandler = Server.getServer().findClinet(opponentName);
-                    if (opponentHandler == null || !opponentHandler.isAlive()) {
-                        out.put("status", "404");
-                        out.put("message", "Korisnik " + opponentName + " nije pronadjen");
-                        opponentName = "";
-                        busy = false;
-                    } else if (!opponentHandler.busy) {
-                        out.put("status", "400");
-                        out.put("message", "Korisnik " + opponentName + " je izasao iz igre");
-                        opponentName = "";
-                        busy = false;
-                    } else {
-                        String replyStatus; // common for both players
-                        String messageToOpponent;
-                        phase = Phase.REQUEST_PLAY_OFFER;
-                        if (accept.equalsIgnoreCase("yes")) {
-                            replyStatus = "202"; // 202 -> accepted (PROCEED as reply)
-                            messageToOpponent = "Zahtev za igru od strane korisnika " + name + " je prihvacen";
-                        } else { // consider it "no"
-                            replyStatus = "400"; // 400 -> rejected
-                            messageToOpponent = "Zahtev za igru od strane korisnika " + name + " je odbijen";
-
-                            // make them available again
-                            opponentHandler.busy = false;
-                            opponentHandler.opponentName = "";
-                            opponentName = "";
-                            busy = false;
-                        }
-                        out.put("status", replyStatus);
-                        out.put("message", "Odgovor je uspesno prosledjen");
-
-                        // send reply from offer of another player in detached thread
-                        new Timer("requestPlay")
-                                .schedule(
-                                        new TimerTask() {
-                                            @Override
-                                            public void run() {
-                                                JSONObject jsonResToOpponent = new JSONObject();
-                                                jsonResToOpponent.put("method", "requestPlay");
-                                                jsonResToOpponent.put("message", messageToOpponent);
-                                                jsonResToOpponent.put("status", replyStatus);
-
-                                                opponentHandler.phase = Phase.REQUEST_PLAY;
-                                                opponentHandler.sendRequest(jsonResToOpponent.toJSONString());
-                                            }
-                                        }, 1500L // wait for 1.5 sec
-                                );
-                    }
-                }
-
-            } else {
-                out.put("status", "405");
-                out.put("message", "Poslati zahtev je nepoznat ili trenutno nije podrzan");
-            }
-
+            in = (JSONObject)parser.parse(msg);
         } catch (ParseException ex) {
             out.put("status", "500");
             out.put("message", "Interna serverska greska");
+            return out.toJSONString();
+        }
+
+        // look for method
+        String method;
+        if (in.get("method") != null) {
+            method = in.get("method").toString();
+        } else {
+            out.put("status", "400");
+            out.put("message", "Zahtev nije poslat");
+            return out.toJSONString();
+        }
+
+        // turn him back the same method
+        out.put("method", method);
+
+        Phase methodToPhase = StringToPhase(method);
+        if (methodToPhase == Phase.NONE) {
+            out.put("status", "405");
+            out.put("message", "Poslati zahtev je nepoznat ili trenutno nije podrzan");
+            return out.toJSONString();
+        }
+        else if (methodToPhase != Phase.REGISTER &&
+                 methodToPhase != Phase.CONNECT &&
+                 methodToPhase != Phase.DISCONNECT) {
+            // name should exist in (almost) any method (phase)
+            if (name.isEmpty()) {
+                out.put("status", "400");
+                out.put("message", "Morate se registrovati pre nego sto nastavite dalje");
+                return out.toJSONString();
+            }
+        }
+
+        switch(methodToPhase) {
+            case REGISTER:
+                // check is user already registered
+                if (!name.isEmpty()) {
+                    // should not be possible from UI part
+                    out.put("status", "400");
+                    out.put("message", "Korisnik je vec registrovan");
+                    return out.toJSONString();
+                }
+                // read username
+                if (in.get("name") == null) {
+                    out.put("status", "400");
+                    out.put("message", "Korisnicko ime nije poslato");
+                    return out.toJSONString();
+                }
+
+                String inName = in.get("name").toString();
+                if (inName.isBlank() || inName.isEmpty()) {
+                    // error if passed name is empty/blank
+                    out.put("status", "400");
+                    out.put("message", "Poslato je prazno korisnicko ime");
+                } else if (!inName.matches("^(?=\\s*\\S).{1,15}$")) {
+                    // error if name doesn't support format
+                    out.put("status", "400");
+                    out.put("message", "Uneto ime ne sme imati razmake i vise od 15 karaktera");
+                } else if (Server.getServer().findClinet(inName) != null) {
+                    // error if client already exist
+                    out.put("status", "400");
+                    out.put("message", "Korisnik sa imenom " + inName + " vec postoji");
+                } else {
+                    // success
+                    phase = Phase.REGISTER;
+                    name = inName;
+                    out.put("status", "200");
+                    out.put("message", "Korisnik sa imenom " + name + " je uspesno registrovan");
+                }
+                break;
+            case REFRESH: {
+                phase = Phase.REFRESH;
+                out.put("status", "200");
+                out.put("message", "Korisnik je uspesno preuzeo listu potencijalnih protivnika");
+
+                JSONArray users = new JSONArray();
+                for (ClientHandler client : Server.getServer().getClients()) {
+                    if (client != this && !client.busy) {
+                        JSONObject user = new JSONObject();
+                        user.put("name", client.name);
+                        users.add(user);
+                    }
+                }
+                out.put("users", users);
+                break;
+            }
+            // message from player who wants to request play to another player
+            case REQUEST_PLAY: {
+                // look for opponent
+                if (in.get("opponent") != null) {
+                    opponentName = in.get("opponent").toString();
+                } else {
+                    out.put("status", "400");
+                    out.put("message", "Nije naveden protivnik u zahtevu za igru");
+                    return out.toJSONString();
+                }
+
+                // check the opponent
+                ClientHandler opponentHandler = Server.getServer().findClinet(opponentName);
+                if (opponentHandler == null || !opponentHandler.isAlive()) {
+                    out.put("status", "404");
+                    out.put("message", "Korisnik " + opponentName + " nije pronadjen");
+                    opponentName = "";
+                } else if (opponentHandler.busy) {
+                    out.put("status", "400");
+                    out.put("message", "Korisnik " + opponentName + " je vec u igri");
+                    opponentName = "";
+                } else {
+                    phase = Phase.REQUEST_PLAY;
+                    out.put("status", "201"); // 201 -> created (HOLD as reply)
+                    out.put("message", "Zahtev za igru je uspesno poslat korisniku " + opponentName);
+
+                    // make them unavailable for other players, even if they don't agree to play
+                    busy = true;
+                    opponentHandler.busy = true;
+                    opponentHandler.opponentName = name;
+                    opponentName = opponentHandler.name;
+
+                    // send offer to another player in detached thread
+                    new Timer("requestPlayOffer")
+                            .schedule(
+                                    new TimerTask() {
+                                        @Override
+                                        public void run() {
+                                            JSONObject jsonReqToOpponent = new JSONObject();
+                                            jsonReqToOpponent.put("method", "requestPlayOffer");
+                                            jsonReqToOpponent.put("message", "Zahtev za igru je poslat od strane korisnika " + name);
+                                            jsonReqToOpponent.put("status", "201");
+                                            jsonReqToOpponent.put("opponent", name);
+
+                                            opponentHandler.phase = Phase.REQUEST_PLAY_OFFER;
+                                            opponentHandler.sendRequest(jsonReqToOpponent.toJSONString());
+                                        }
+                                    }, 1500L // wait for 1.5 sec
+                            );
+                }
+                break;
+            }
+            // message from player who answers to request play from another player
+            case REQUEST_PLAY_OFFER: {
+                // look for accept field
+                String accept;
+                if (in.get("accept") != null) {
+                    accept = in.get("accept").toString();
+                } else {
+                    out.put("status", "400");
+                    out.put("message", "Nepotpun odgovor na ponudu protivnika");
+                    return out.toJSONString();
+                }
+
+                // player must be set to busy and have the opponent name set from another thread
+                if (!busy || opponentName.isEmpty()) {
+                    // clear them both then
+                    busy = false;
+                    opponentName = "";
+
+                    out.put("status", "400");
+                    out.put("message", "Veza sa protivnikom je pukla");
+                    return out.toJSONString();
+                }
+
+                // check the opponent
+                ClientHandler opponentHandler = Server.getServer().findClinet(opponentName);
+                if (opponentHandler == null || !opponentHandler.isAlive()) {
+                    out.put("status", "404");
+                    out.put("message", "Korisnik " + opponentName + " nije pronadjen");
+                    opponentName = "";
+                    busy = false;
+                } else if (!opponentHandler.busy) {
+                    out.put("status", "400");
+                    out.put("message", "Korisnik " + opponentName + " je izasao iz igre");
+                    opponentName = "";
+                    busy = false;
+                } else {
+                    String replyStatus; // common for both players
+                    String messageToOpponent;
+                    phase = Phase.PLAY;
+                    if (accept.equalsIgnoreCase("yes")) {
+                        replyStatus = "202"; // 202 -> accepted (PROCEED as reply)
+                        messageToOpponent = "Zahtev za igru od strane korisnika " + name + " je prihvacen";
+                    } else { // consider it "no"
+                        replyStatus = "400"; // 400 -> rejected
+                        messageToOpponent = "Zahtev za igru od strane korisnika " + name + " je odbijen";
+
+                        // make them available again
+                        opponentHandler.busy = false;
+                        opponentHandler.opponentName = "";
+                        opponentName = "";
+                        busy = false;
+                    }
+                    out.put("status", replyStatus);
+                    out.put("message", "Odgovor je uspesno prosledjen");
+
+                    // send reply from offer of another player in detached thread
+                    new Timer("requestPlay")
+                            .schedule(
+                                    new TimerTask() {
+                                        @Override
+                                        public void run() {
+                                            JSONObject jsonResToOpponent = new JSONObject();
+                                            jsonResToOpponent.put("method", "requestPlay");
+                                            jsonResToOpponent.put("message", messageToOpponent);
+                                            jsonResToOpponent.put("status", replyStatus);
+
+                                            opponentHandler.phase = Phase.PLAY;
+                                            opponentHandler.sendRequest(jsonResToOpponent.toJSONString());
+                                        }
+                                    }, 1500L // wait for 1.5 sec
+                            );
+                }
+                break;
+            }
+            case PLAY: {
+                // player must be in game
+                if (phase != Phase.PLAY || !busy) {
+                    out.put("status", "400");
+                    out.put("message", "Niste u igri");
+                    return out.toJSONString();
+                }
+                
+                // there must be opponent
+                ClientHandler opponentHandler = Server.getServer().findClinet(opponentName);
+                if (opponentName.isEmpty() || opponentHandler == null) {
+                    out.put("status", "404");
+                    out.put("message", "Protivnik nije pronadjen");
+                    return out.toJSONString();
+                }
+
+                // opponent must be in game, too
+                if (opponentHandler.phase != Phase.PLAY || !opponentHandler.busy) {
+                    out.put("status", "400");
+                    out.put("message", "Protivnik nije u igri");
+                    return out.toJSONString();
+                }
+
+                // look for mandatory play fields
+                String result;
+                String iCoord, jCoord;
+                try {
+                    result = Objects.requireNonNull(in.get("result")).toString();
+                    iCoord = Objects.requireNonNull(in.get("i")).toString();
+                    jCoord = Objects.requireNonNull(in.get("j")).toString();
+                } catch (NullPointerException e) {
+                    out.put("status", "400");
+                    out.put("message", "Nepotpun odgovor u igri");
+                    return out.toJSONString();
+                }
+                
+                if (result.equalsIgnoreCase("draw") || result.equalsIgnoreCase("lose")) {
+                    busy = false;
+                    phase = Phase.REFRESH;
+                    opponentName = "";
+                    opponentHandler.busy = false;
+                    opponentHandler.phase = Phase.REFRESH;
+                    opponentHandler.opponentName = "";
+                }
+
+                // forward message to another player (opponent)
+                new Timer("requestPlay")
+                        .schedule(
+                                new TimerTask() {
+                                    @Override
+                                    public void run() {
+                                        JSONObject jsonResToOpponent = new JSONObject();
+                                        jsonResToOpponent.put("method", "play");
+                                        jsonResToOpponent.put("result",result);
+                                        jsonResToOpponent.put("i", iCoord);
+                                        jsonResToOpponent.put("j", jCoord);
+                                        jsonResToOpponent.put("status", "200");
+
+                                        opponentHandler.phase = Phase.PLAY;
+                                        opponentHandler.sendRequest(jsonResToOpponent.toJSONString());
+                                    }
+                                }, 500L // wait for 0.5 sec
+                        );
+
+                // nothing to reply
+                return "";
+            }
         }
         return out.toJSONString();
     }

@@ -1,5 +1,7 @@
 package fourinrow.android.client.network;
 
+import androidx.annotation.NonNull;
+
 import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
 import org.json.simple.parser.JSONParser;
@@ -132,8 +134,12 @@ public class ServerConnector implements Runnable {
         pw = null;
     }
 
-    String getJsonString(JSONObject json, String key) {
-        return Objects.requireNonNull(json.get(key)).toString();
+    String getJsonString(@NonNull JSONObject json, String key) {
+        try {
+            return Objects.requireNonNull(json.get(key)).toString();
+        } catch (NullPointerException e) {
+            return "";
+        }
     }
 
     String processMessage(String in) {
@@ -144,23 +150,31 @@ public class ServerConnector implements Runnable {
             jsonIn = (JSONObject)parser.parse(in);
         } catch (ParseException parsE) {
             activity.handleEvent(
-                    new Event (Phase.PARSE, State.FAILURE),
+                    new Event(Phase.PARSE, State.FAILURE),
                     new Report(parsE, "Greska: Problemi prilikom parsiranja poruke. Pokusajte ponovo poslati zahtev")
             );
             // no need for reply
             return "";
         }
 
-        String method = getJsonString(jsonIn, "method");
         String message = getJsonString(jsonIn, "message");
         String status = getJsonString(jsonIn, "status");
-        if (method.isEmpty() || message.isEmpty() || status.isEmpty()) {
+        String method = getJsonString(jsonIn, "method");
+
+        if (status.isEmpty() || message.isEmpty()) {
+            if (!method.equalsIgnoreCase("play")) {
+                activity.handleEvent(
+                        new Event(Phase.PARSE, State.FAILURE),
+                        new Report(null,"Greska: Fale mandatorni delovi u dogovoru")
+                );
+                // no need for reply
+                return "";
+            }
+        } else if (method.isEmpty() && status.charAt(0) == '2') {
+            // if status is OK method should exist
             activity.handleEvent(
-                    new Event (Phase.PARSE, State.FAILURE),
-                    new Report(
-                            null,
-                            "Greska: Nepotpun odgovor od strane servera"
-                    )
+                    new Event(Phase.PARSE, State.FAILURE),
+                    new Report(null,"Greska: Nije poznato na koji zahtev je server odgovorio")
             );
             // no need for reply
             return "";
@@ -175,7 +189,9 @@ public class ServerConnector implements Runnable {
         if (method.equalsIgnoreCase("register")) {
             phase = Phase.REGISTER;
             state = (status.contentEquals("200")) ? State.SUCCESS : State.FAILURE;
-            activityMessage = (status.contentEquals("200")) ? String.copyValueOf(message.toCharArray()) : "Greska(" + status + "): " + message;
+            activityMessage = (status.contentEquals("200")) ?
+                    String.copyValueOf(message.toCharArray()) :
+                    "Greska(" + status + "): " + message;
         } else if (method.equalsIgnoreCase("refresh")) {
             phase = Phase.REFRESH;
             state = (status.contentEquals("200")) ? State.SUCCESS : State.FAILURE;
@@ -196,7 +212,9 @@ public class ServerConnector implements Runnable {
             }
 
             if (activityMessage.isEmpty()) { // handles two condition variants
-                activityMessage = (state == State.SUCCESS) ? String.copyValueOf(message.toCharArray()) : "Greska(" + status + "): " + message;
+                activityMessage = (state == State.SUCCESS) ?
+                        String.copyValueOf(message.toCharArray()) :
+                        "Greska(" + status + "): " + message;
             }
         } else if (method.equalsIgnoreCase("requestPlay")) {
             // reply from your request to another player
@@ -223,9 +241,39 @@ public class ServerConnector implements Runnable {
                 state = State.FAILURE; // rejected or some other occurrence
             }
             activityMessage = message;
+        } else if(method.equalsIgnoreCase("play")) {
+            phase = Phase.PLAY;
+            state = (status.equalsIgnoreCase("200")) ? State.SUCCESS : State.FAILURE;
+            if (state == State.SUCCESS) {
+                // check necessary JSON fields
+                try {
+                    Integer i = Integer.parseInt(Objects.requireNonNull(jsonIn.get("i")).toString());
+                    Integer j = Integer.parseInt(Objects.requireNonNull(jsonIn.get("j")).toString());
+                    Objects.requireNonNull(jsonIn.get("result"));
+
+                    // put Integers instead of string
+                    jsonIn.put("i", i);
+                    jsonIn.put("j", j);
+                } catch (NullPointerException nullE) {
+                    state = State.FAILURE;
+                    activityMessage = "Nedostaju neophodna polja prilikom slanja poteza";
+                } catch (NumberFormatException numberE) {
+                    state = State.FAILURE;
+                    activityMessage = "Poslate koordinate nisu brojevi";
+                }
+
+                // remove unnecessary data from JSON
+                jsonIn.remove("status");
+                jsonIn.remove("method");
+
+                // pass it to game activity
+                data = jsonIn;
+            }
         } else {
-            return "";
+            phase = Phase.NONE;
+            state = State.NONE;
         }
+
         activity.handleEvent(new Event(phase, state, data), new Report(null, activityMessage));
         return reply;
     }

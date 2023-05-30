@@ -1,6 +1,7 @@
 package fourinrow.android.client.activities;
 
 import android.app.AlertDialog;
+import android.app.Dialog;
 import android.content.DialogInterface;
 import android.content.Intent;
 
@@ -23,6 +24,10 @@ public abstract class EventHandlerActivity extends AppCompatActivity {
     }
 
     final protected void activityTransition(Class<?> nextActivityClass) {
+        activityTransition(nextActivityClass, 1000);
+    }
+
+    final protected void activityTransition(Class<?> nextActivityClass, int delay) {
         AppCompatActivity currentActivity = this;
         Timer timer = new Timer();
         timer.schedule(new TimerTask() {
@@ -30,26 +35,36 @@ public abstract class EventHandlerActivity extends AppCompatActivity {
             public void run() {
                 startActivity(new Intent(currentActivity, nextActivityClass));
             }
-        }, 1000);
+        }, delay);
+    }
+
+    protected class ButtonSpecs {
+        DialogInterface.OnClickListener listener;
+        String text;
+
+        public ButtonSpecs(DialogInterface.OnClickListener listener, String text) {
+            this.listener = listener;
+            this.text = text;
+        }
     }
 
     final protected AlertDialog alertDisplay(String title,
                                              String message,
-                                             DialogInterface.OnClickListener yesListener,
-                                             DialogInterface.OnClickListener noListener) {
+                                             ButtonSpecs yesButton,
+                                             ButtonSpecs noButton) {
 
-        return new AlertDialog.Builder(this)
+        AlertDialog.Builder db = new AlertDialog.Builder(this)
                 .setTitle(title)
                 .setMessage(message)
+                .setIcon(android.R.drawable.ic_dialog_info);
 
-                // Specifying a listener allows you to take an action before dismissing the dialog.
-                // The dialog is automatically dismissed when a dialog button is clicked.
-                .setPositiveButton("DA", yesListener)
-
-                // A null listener allows the button to dismiss the dialog and take no further action.
-                .setNegativeButton("NE", noListener)
-                .setIcon(android.R.drawable.ic_dialog_alert)
-                .show();
+        if (yesButton != null) {
+            db.setPositiveButton(yesButton.text, yesButton.listener);
+        }
+        if (noButton != null) {
+            db.setNegativeButton(noButton.text, noButton.listener);
+        }
+        return db.show();
     }
     protected abstract void uiThreadHandleImpl(Event event);
 }

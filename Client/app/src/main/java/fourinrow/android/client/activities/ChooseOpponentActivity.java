@@ -157,7 +157,7 @@ public class ChooseOpponentActivity extends EventHandlerActivity {
 
                     // set opponentName & who plays first -> challenger plays first
                     ServerConnector.getServer().setOpponentName(uiSpinner.getSelectedItem().toString());
-                    ServerConnector.getServer().setPlayFirst(true);
+                    ServerConnector.getServer().setPlayFirst(true); // plays first
 
                     // start visualization of pending animation
                     findViewById(R.id.loadingPanel).setVisibility(View.VISIBLE);
@@ -209,33 +209,39 @@ public class ChooseOpponentActivity extends EventHandlerActivity {
                         return;
                     }
 
-                    // set opponentName
+                    // set opponentName & who plays first -> challenger plays first
                     ServerConnector.getServer().setOpponentName(opponent);
-                    ServerConnector.getServer().setPlayFirst(false);
+                    ServerConnector.getServer().setPlayFirst(false); // plays second
 
                     gameOfferDialog = alertDisplay(
                             "ZAHTEV ZA IGRU",
                             "Igrac " + opponent + " Vas poziva na partiju.\r\n" +
                                     "Da li prihvatate ?",
-                            (dialog, which) -> {
-                                // on Accept
-                                Map<String, String> req = new HashMap<>();
-                                req.put("method", "requestPlayOffer");
-                                req.put("accept", "yes");
-                                MessageSender.sendMessage(JSONObject.toJSONString(req));
-                            },
-                            (dialog, which) -> {
-                                // on Refuse
-                                Map<String, String> req = new HashMap<>();
-                                req.put("method", "requestPlayOffer");
-                                req.put("accept", "no");
-                                MessageSender.sendMessage(JSONObject.toJSONString(req));
+                            new ButtonSpecs(
+                                (dialog, which) -> {
+                                    // on Accept
+                                    Map<String, String> req = new HashMap<>();
+                                    req.put("method", "requestPlayOffer");
+                                    req.put("accept", "yes");
+                                    MessageSender.sendMessage(JSONObject.toJSONString(req));
+                                },
+                                "DA"
+                            ),
+                            new ButtonSpecs(
+                                (dialog, which) -> {
+                                    // on Refuse
+                                    Map<String, String> req = new HashMap<>();
+                                    req.put("method", "requestPlayOffer");
+                                    req.put("accept", "no");
+                                    MessageSender.sendMessage(JSONObject.toJSONString(req));
 
-                                // enable buttons
-                                uiBtnRefresh.setEnabled(true);
-                                uiBtnRequestPlay.setEnabled(true);
-                                uiSpinner.setClickable(true);
-                            }
+                                    // enable buttons
+                                    uiBtnRefresh.setEnabled(true);
+                                    uiBtnRequestPlay.setEnabled(true);
+                                    uiSpinner.setClickable(true);
+                                },
+                                "NE"
+                            )
                     );
                 }
                 case FAILURE -> {

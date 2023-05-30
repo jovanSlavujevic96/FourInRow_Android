@@ -476,7 +476,7 @@
                 android:layout_height="45dp"
                 android:layout_below="@id/button_6_4"
                 api:backgroundTint="@color/white"
-                tools:ignore="TouchTargetSizeCheck" />
+                tools:ignore="TouchTargetSizeCheck,SpeakableTextPresentCheck" />
 
         </RelativeLayout>
 

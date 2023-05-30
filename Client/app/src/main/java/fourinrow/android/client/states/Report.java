@@ -20,11 +20,13 @@ public class Report {
         }
 
         // message report
-        System.out.println(message);
-        Snackbar.make(
-                view,
-                message,
-                Snackbar.LENGTH_SHORT
-        ).show();
+        if (message != null && !message.isEmpty()) {
+            System.out.println(message);
+            Snackbar.make(
+                    view,
+                    message,
+                    Snackbar.LENGTH_SHORT
+            ).show();
+        }
     }
 }
