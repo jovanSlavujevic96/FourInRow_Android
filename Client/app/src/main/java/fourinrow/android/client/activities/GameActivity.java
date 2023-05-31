@@ -38,8 +38,55 @@ public class GameActivity extends EventHandlerActivity {
     private boolean playersTurn;
     private int playersColor;
     private int opponentsColor;
-    private int whiteColor;
     private AlertDialog latestDialog = null;
+
+    private int rematchApprovals;
+
+    protected void endOfGame() {
+        if (latestDialog != null) {
+            latestDialog.dismiss();
+        }
+
+        latestDialog = alertDisplay(
+                "PONOVO",
+                "Zelite li da odigrate ponovo sa " + ServerConnector.getServer().getOpponentName() + " ?",
+                new ButtonSpecs(
+                        (dialog, which) -> {
+                            JSONObject req = new JSONObject();
+                            req.put("method", "playAgain");
+                            req.put("answer", "yes");
+                            MessageSender.sendMessage(req.toJSONString());
+
+                            // player's approval
+                            rematchApprovals++;
+
+                            if (rematchApprovals == 2) {
+                                new Report(null, "Otpocinje se nova igra sa " + ServerConnector.getServer().getOpponentName())
+                                        .report(findViewById(android.R.id.content));
+
+                                activityTransition(GameActivity.class, 2500);
+                            }
+                        },
+                        "DA"
+                ),
+                new ButtonSpecs(
+                        (dialog, which) -> {
+                            JSONObject req = new JSONObject();
+                            req.put("method", "playAgain");
+                            req.put("answer", "no");
+                            MessageSender.sendMessage(req.toJSONString());
+
+                            // log report
+                            new Report(null, "Povratak na meni za izbor protivnika")
+                                    .report(findViewById(android.R.id.content));
+
+                            // transition to another window (activity)
+                            activityTransition(ChooseOpponentActivity.class, 5000);
+                        },
+                        "NE"
+                )
+        );
+    }
 
     @Override
     protected void uiThreadHandleImpl(Event event) {
@@ -53,12 +100,20 @@ public class GameActivity extends EventHandlerActivity {
         } else if (event.getPhase() == Phase.PLAY) {
             switch(event.getState()) {
                 case FAILURE -> {
-                    // play again because you made some mistake
-                    playersTurn = true;
-
                     // if there has been some dialog -> remove it
                     if (latestDialog != null) {
                         latestDialog.dismiss();
+                    }
+
+                    Object data = event.getData();
+                    if (data != null && data.toString().contentEquals("playerGone")) {
+                        new Report(null, "Protivnik je izgubio konekciju. Igra se prekida")
+                                .report(findViewById(android.R.id.content));
+
+                        activityTransition(ChooseOpponentActivity.class, 2500);
+                    } else {
+                        // play again because you made some mistake
+                        playersTurn = true;
                     }
                 }
                 case SUCCESS -> {
@@ -77,6 +132,7 @@ public class GameActivity extends EventHandlerActivity {
                     // if there has been some dialog -> remove it
                     if (latestDialog != null) {
                         latestDialog.dismiss();
+                        latestDialog = null;
                     }
 
                     if (result.equalsIgnoreCase("open")) {
@@ -100,12 +156,7 @@ public class GameActivity extends EventHandlerActivity {
                                 "Nazalost, izgubili ste od " + ServerConnector.getServer().getOpponentName(),
                                 new ButtonSpecs(
                                         (dialog, which) -> {
-                                            // log report
-                                            new Report(null, "Povratak na meni za izbor protivnika")
-                                                    .report(findViewById(android.R.id.content));
-
-                                            // transition to another window (activity)
-                                            activityTransition(ChooseOpponentActivity.class, 5000);
+                                            endOfGame();
                                         },
                                         "NASTAVI"
                                 ),
@@ -121,17 +172,46 @@ public class GameActivity extends EventHandlerActivity {
                                 "Odigrali ste nereseno sa " + ServerConnector.getServer().getOpponentName(),
                                 new ButtonSpecs(
                                         (dialog, which) -> {
-                                            // log report
-                                            new Report(null, "Povratak na meni za izbor protivnika")
-                                                    .report(findViewById(android.R.id.content));
-
-                                            // transition to another window (activity)
-                                            activityTransition(ChooseOpponentActivity.class, 5000);
+                                            endOfGame();
                                         },
                                         "NASTAVI"
                                 ),
                                 null
                         );
+                    }
+                }
+            }
+        } else if (event.getPhase() == Phase.PLAY_AGAIN) {
+            switch(event.getState()) {
+                case FAILURE -> {
+                    // if there has been some dialog -> remove it
+                    if (latestDialog != null) {
+                        latestDialog.dismiss();
+                        latestDialog = null;
+                    }
+                    Object data = event.getData();
+                    if (data != null && data.toString().contentEquals("playerGone")) {
+                        new Report(null, "Protivnik je izgubio konekciju. Revans se otkazuje")
+                                .report(findViewById(android.R.id.content));
+                    }
+                    activityTransition(ChooseOpponentActivity.class, 2500);
+                }
+                case SUCCESS -> {
+                    // approval from opponent
+                    rematchApprovals++;
+
+                    // if both of players apporved rematch
+                    if (rematchApprovals == 2) {
+                        // if there has been some dialog -> remove it
+                        if (latestDialog != null) {
+                            latestDialog.dismiss();
+                            latestDialog = null;
+                        }
+
+                        new Report(null, "Otpocinje se nova igra sa " + ServerConnector.getServer().getOpponentName())
+                                .report(findViewById(android.R.id.content));
+
+                        activityTransition(GameActivity.class, 2500);
                     }
                 }
             }
@@ -146,7 +226,7 @@ public class GameActivity extends EventHandlerActivity {
         TextView player1Name = findViewById(R.id.player1);
         TextView player2Name = findViewById(R.id.player2);
 
-        whiteColor = ContextCompat.getColor(getApplicationContext(), R.color.white);
+        int whiteColor = ContextCompat.getColor(getApplicationContext(), R.color.white);
         ServerConnector.getServer().bindActivity(this);
 
         if (ServerConnector.getServer().getPlayFirst()) {
@@ -162,6 +242,7 @@ public class GameActivity extends EventHandlerActivity {
             playersColor = ContextCompat.getColor(getApplicationContext(), R.color.blue);
             opponentsColor = ContextCompat.getColor(getApplicationContext(), R.color.red);
         }
+        rematchApprovals = 0;
 
         // iterate through columns
         for(int i = 0; i < 7; i++) {
@@ -213,20 +294,15 @@ public class GameActivity extends EventHandlerActivity {
                             "CESTITAMO! Pobedili ste " + ServerConnector.getServer().getOpponentName(),
                             new ButtonSpecs(
                                     (dialog, which) -> {
-                                        // log report
-                                        new Report(null, "Povratak na meni za izbor protivnika")
-                                                .report(view);
-
-                                        // transition to another window (activity)
-                                        activityTransition(ChooseOpponentActivity.class, 5000);
+                                        endOfGame();
                                     },
                                     "NASTAVI"
                             ),
                             null
                     );
                 }
-                // if there's no win there is possibility for draw
-                else if (drawCheck()) {
+                // if there's no win there is possibility for draw -> if all buttons are checked
+                else if (allButtonsChecked()) {
                     // send draw result to opponent -> game ended / no winner
                     req.put("result", "draw");
 
@@ -236,12 +312,7 @@ public class GameActivity extends EventHandlerActivity {
                             "Odigrali ste nereseno sa " + ServerConnector.getServer().getOpponentName(),
                             new ButtonSpecs(
                                     (dialog, which) -> {
-                                        // log report
-                                        new Report(null, "Povratak na meni za izbor protivnika")
-                                                .report(view);
-
-                                        // transition to another window (activity)
-                                        activityTransition(ChooseOpponentActivity.class, 5000);
+                                        endOfGame();
                                     },
                                     "NASTAVI"
                             ),
@@ -350,7 +421,7 @@ public class GameActivity extends EventHandlerActivity {
         return false;
     }
 
-    boolean drawCheck() {
+    boolean allButtonsChecked() {
         // iterate through columns
         for (int i = 0; i < 7; i++) {
             // iterate through rows (column items)

@@ -165,7 +165,7 @@ public class ServerConnector implements Runnable {
             if (!method.equalsIgnoreCase("play")) {
                 activity.handleEvent(
                         new Event(Phase.PARSE, State.FAILURE),
-                        new Report(null,"Greska: Fale mandatorni delovi u dogovoru")
+                        new Report(null,"Greska: Fale mandatorni delovi u odgovoru")
                 );
                 // no need for reply
                 return "";
@@ -268,6 +268,19 @@ public class ServerConnector implements Runnable {
 
                 // pass it to game activity
                 data = jsonIn;
+            } else {
+                data = jsonIn.get("extraStatus"); // nullable
+            }
+        } else if(method.equalsIgnoreCase("playAgain")) {
+            phase = Phase.PLAY_AGAIN;
+            activityMessage = message;
+            if (status.contentEquals("201")) {
+                state = State.HOLD;
+            } else if (status.contentEquals("202")) {
+                state = State.SUCCESS;
+            } else {
+                data = jsonIn.get("extraStatus"); // nullable
+                state = State.FAILURE;
             }
         } else {
             phase = Phase.NONE;

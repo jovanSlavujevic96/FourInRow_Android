@@ -10,4 +10,5 @@ public enum Phase {
     REQUEST_PLAY,
     REQUEST_PLAY_OFFER,
     PLAY,
+    PLAY_AGAIN,
 }

@@ -9,6 +9,7 @@ import java.net.Socket;
 import java.util.Objects;
 import java.util.Timer;
 import java.util.TimerTask;
+import java.util.function.Function;
 import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
 import org.json.simple.parser.JSONParser;
@@ -23,6 +24,7 @@ public class ClientHandler implements Runnable {
     private String name;
     private String opponentName;
     private boolean busy;
+    private boolean rematch;
     private BufferedReader br;  // for recv
     private PrintWriter pw;     // for send
 
@@ -36,6 +38,7 @@ public class ClientHandler implements Runnable {
         REQUEST_PLAY,
         REQUEST_PLAY_OFFER,
         PLAY,
+        PLAY_AGAIN
     }
     
     static private Phase StringToPhase(String phaseStr) {
@@ -55,6 +58,8 @@ public class ClientHandler implements Runnable {
             return Phase.REQUEST_PLAY_OFFER;
         } else if (phaseStr.equalsIgnoreCase("play")) {
             return Phase.PLAY;
+        } else if (phaseStr.equalsIgnoreCase("playAgain")) {
+            return Phase.PLAY_AGAIN;
         }
         return Phase.NONE;
     }
@@ -69,8 +74,21 @@ public class ClientHandler implements Runnable {
             case REQUEST_PLAY -> "requestPlay";
             case REQUEST_PLAY_OFFER -> "requestPlayOffer";
             case PLAY -> "play";
+            case PLAY_AGAIN -> "playAgain";
             default -> "none";
         };
+    }
+    
+    static void executeTimerTask(String timerName, long timeout, Function<Void, Void> f) {
+        new Timer(timerName)
+                .schedule(
+                        new TimerTask() {
+                            @Override
+                            public void run() {
+                                f.apply(null);
+                            }
+                        }, timeout
+                );
     }
 
     private Phase phase;
@@ -106,14 +124,17 @@ public class ClientHandler implements Runnable {
                     String opponentPhase = ClientHandler.PhaseToString(opponent.phase);
                     req.put("method", opponentPhase);
                     req.put("status", "400");
+                    req.put("extraStatus", "playerGone");
                     req.put("message", "Proces je prekinut zbog diskonekcije korisnika " + name);
                     opponent.sendRequest(req.toJSONString());
                 }
                 opponent.opponentName = "";
                 opponent.busy = false;
+                opponent.rematch = false;
             }
             opponentName = "";
             busy = false;
+            rematch = false;
         }
     }
     
@@ -128,6 +149,7 @@ public class ClientHandler implements Runnable {
         this.socket = socket;
         name = "";
         busy = false;
+        rematch = false;
         try {
             br = new BufferedReader(new InputStreamReader(socket.getInputStream(), "UTF-8"));
             pw = new PrintWriter(new OutputStreamWriter(socket.getOutputStream()), true);
@@ -219,6 +241,7 @@ public class ClientHandler implements Runnable {
                 }
                 break;
             case REFRESH: {
+                rematch = false;
                 phase = Phase.REFRESH;
                 out.put("status", "200");
                 out.put("message", "Korisnik je uspesno preuzeo listu potencijalnih protivnika");
@@ -267,22 +290,21 @@ public class ClientHandler implements Runnable {
                     opponentName = opponentHandler.name;
 
                     // send offer to another player in detached thread
-                    new Timer("requestPlayOffer")
-                            .schedule(
-                                    new TimerTask() {
-                                        @Override
-                                        public void run() {
-                                            JSONObject jsonReqToOpponent = new JSONObject();
-                                            jsonReqToOpponent.put("method", "requestPlayOffer");
-                                            jsonReqToOpponent.put("message", "Zahtev za igru je poslat od strane korisnika " + name);
-                                            jsonReqToOpponent.put("status", "201");
-                                            jsonReqToOpponent.put("opponent", name);
+                    ClientHandler.executeTimerTask(
+                            "requestPlayOffer",
+                            1500L,
+                            (none) -> {
+                                JSONObject jsonReqToOpponent = new JSONObject();
+                                jsonReqToOpponent.put("method", "requestPlayOffer");
+                                jsonReqToOpponent.put("message", "Zahtev za igru je poslat od strane korisnika " + name);
+                                jsonReqToOpponent.put("status", "201");
+                                jsonReqToOpponent.put("opponent", name);
 
-                                            opponentHandler.phase = Phase.REQUEST_PLAY_OFFER;
-                                            opponentHandler.sendRequest(jsonReqToOpponent.toJSONString());
-                                        }
-                                    }, 1500L // wait for 1.5 sec
-                            );
+                                opponentHandler.phase = Phase.REQUEST_PLAY_OFFER;
+                                opponentHandler.sendRequest(jsonReqToOpponent.toJSONString());
+                                return null;
+                            }
+                    );
                 }
                 break;
             }
@@ -342,21 +364,20 @@ public class ClientHandler implements Runnable {
                     out.put("message", "Odgovor je uspesno prosledjen");
 
                     // send reply from offer of another player in detached thread
-                    new Timer("requestPlay")
-                            .schedule(
-                                    new TimerTask() {
-                                        @Override
-                                        public void run() {
-                                            JSONObject jsonResToOpponent = new JSONObject();
-                                            jsonResToOpponent.put("method", "requestPlay");
-                                            jsonResToOpponent.put("message", messageToOpponent);
-                                            jsonResToOpponent.put("status", replyStatus);
+                    ClientHandler.executeTimerTask(
+                            "requestPlay",
+                            1500L,
+                            (none) -> {
+                                JSONObject jsonResToOpponent = new JSONObject();
+                                jsonResToOpponent.put("method", "requestPlay");
+                                jsonResToOpponent.put("message", messageToOpponent);
+                                jsonResToOpponent.put("status", replyStatus);
 
-                                            opponentHandler.phase = Phase.PLAY;
-                                            opponentHandler.sendRequest(jsonResToOpponent.toJSONString());
-                                        }
-                                    }, 1500L // wait for 1.5 sec
-                            );
+                                opponentHandler.phase = Phase.PLAY;
+                                opponentHandler.sendRequest(jsonResToOpponent.toJSONString());
+                                return null;
+                            }
+                    );
                 }
                 break;
             }
@@ -397,38 +418,109 @@ public class ClientHandler implements Runnable {
                 }
                 
                 if (result.equalsIgnoreCase("draw") || result.equalsIgnoreCase("lose")) {
-                    busy = false;
-                    phase = Phase.REFRESH;
-                    opponentName = "";
-                    opponentHandler.busy = false;
-                    opponentHandler.phase = Phase.REFRESH;
-                    opponentHandler.opponentName = "";
+                    phase = Phase.PLAY_AGAIN;
+                    opponentHandler.phase = Phase.PLAY_AGAIN;
+                } else {
+                    phase = Phase.PLAY;
+                    opponentHandler.phase = Phase.PLAY;
                 }
 
                 // forward message to another player (opponent)
-                new Timer("requestPlay")
-                        .schedule(
-                                new TimerTask() {
-                                    @Override
-                                    public void run() {
-                                        JSONObject jsonResToOpponent = new JSONObject();
-                                        jsonResToOpponent.put("method", "play");
-                                        jsonResToOpponent.put("result",result);
-                                        jsonResToOpponent.put("i", iCoord);
-                                        jsonResToOpponent.put("j", jCoord);
-                                        jsonResToOpponent.put("status", "200");
+                ClientHandler.executeTimerTask(
+                        "play",
+                        500L,
+                        (none) -> {
+                            JSONObject jsonResToOpponent = new JSONObject();
+                            jsonResToOpponent.put("method", "play");
+                            jsonResToOpponent.put("result",result);
+                            jsonResToOpponent.put("i", iCoord);
+                            jsonResToOpponent.put("j", jCoord);
+                            jsonResToOpponent.put("status", "200");
 
-                                        opponentHandler.phase = Phase.PLAY;
-                                        opponentHandler.sendRequest(jsonResToOpponent.toJSONString());
-                                    }
-                                }, 500L // wait for 0.5 sec
-                        );
+                            opponentHandler.sendRequest(jsonResToOpponent.toJSONString());
+                            return null;
+                        }
+                );
 
                 // nothing to reply
                 return "";
             }
+            case PLAY_AGAIN: {
+                // there must be opponent
+                ClientHandler opponentHandler = Server.getServer().findClinet(opponentName);
+                if (opponentName.isEmpty() || opponentHandler == null) {
+                    out.put("status", "404");
+                    out.put("message", "Protivnik nije pronadjen");
+                    return out.toJSONString();
+                }
+
+                // opponent must be in game, too
+                if (opponentHandler.phase != Phase.PLAY_AGAIN || !opponentHandler.busy) {
+                    out.put("status", "400");
+                    out.put("message", "Protivnik nije u procesu revansa");
+                    return out.toJSONString();
+                }
+                
+                // look for answer field
+                String answer;
+                if (in.get("answer") != null) {
+                    answer = in.get("answer").toString();
+                } else {
+                    out.put("status", "400");
+                    out.put("message", "Nepotpun odgovor na ponudu za revans");
+                    return out.toJSONString();
+                }
+
+                JSONObject resToOpponent = new JSONObject();
+                resToOpponent.put("method", "playAgain");
+
+                if (answer.equalsIgnoreCase("yes")) {
+                    rematch = true;
+
+                    // if rematch is true proceed to rematch
+                    if (opponentHandler.rematch) {
+                        out.put("status", "202");
+                        out.put("message", "Protivnik je potvrdio revans");
+
+                        phase = Phase.PLAY;
+                        opponentHandler.phase = Phase.PLAY;
+                        rematch = false;
+                        opponentHandler.rematch = false;
+                    }
+                    // if rematch is false it means we still wait -> because if he rejects replay will be denied immediatley
+                    else {
+                        out.put("status", "201");
+                        out.put("message", "Ceka se protivnikova potvrda");
+                    }
+                    resToOpponent.put("status", "202");
+                    resToOpponent.put("message", "Protivnik je potvrdio revans");
+                } else {
+                    phase = Phase.REFRESH;
+                    opponentHandler.phase = Phase.REFRESH;
+                    rematch = false;
+                    opponentHandler.rematch = false;
+                    busy = false;
+                    opponentHandler.busy = false;
+                    
+                    out.clear();
+
+                    resToOpponent.put("status", "400");
+                    resToOpponent.put("message", "Protivnik je odbio revans");
+                }
+
+                // send notification to opponent from player's decision
+                ClientHandler.executeTimerTask(
+                        "playAgain",
+                        1000L,
+                        (none) -> {
+                            opponentHandler.sendRequest(resToOpponent.toJSONString());
+                            return null;
+                        }
+                );
+                break;
+            }
         }
-        return out.toJSONString();
+        return out.isEmpty() ? "" : out.toJSONString();
     }
     
     @Override
