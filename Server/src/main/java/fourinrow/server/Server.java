@@ -8,10 +8,6 @@ import java.util.Collection;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
-/**
- *
- * @author Jovan
- */
 public class Server {
     private static Server server = null;
     

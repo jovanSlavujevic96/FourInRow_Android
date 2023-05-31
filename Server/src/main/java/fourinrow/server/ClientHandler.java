@@ -17,7 +17,6 @@ import org.json.simple.parser.ParseException;
 
 /**
  * Client instance which communicates with client in dedicated thread
- * @author Jovan
  */
 public class ClientHandler implements Runnable {
     private final Socket socket;
